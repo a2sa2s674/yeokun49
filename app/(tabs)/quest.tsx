@@ -91,8 +91,9 @@ const headerStyles = StyleSheet.create({
 // ═══════════════════════════════════════════════════
 function FortuneGauge({ value }: { value: number }) {
   // value: 0(흉) ~ 100(길), 50이 중립
+  // 게이지: 왼쪽=길, 오른쪽=흉 → value가 높을수록 왼쪽(길)
   const gaugeWidth = SCREEN_W - 48;
-  const markerPos = (value / 100) * gaugeWidth;
+  const markerPos = ((100 - value) / 100) * gaugeWidth;
 
   return (
     <Animated.View entering={FadeIn.delay(200).duration(600)} style={gaugeStyles.container}>
