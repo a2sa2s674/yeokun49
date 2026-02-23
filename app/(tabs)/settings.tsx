@@ -357,57 +357,41 @@ export default function SettingsScreen() {
     resetStore,
   } = useAppStore();
 
+  /** 웹에서는 window.confirm, 네이티브에서는 Alert.alert 사용 */
+  const confirmAction = (title: string, message: string, onConfirm: () => void) => {
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${title}\n\n${message}`)) {
+        onConfirm();
+      }
+    } else {
+      Alert.alert(title, message, [
+        { text: '취소', style: 'cancel' },
+        { text: '확인', style: 'destructive', onPress: onConfirm },
+      ]);
+    }
+  };
+
   const handleRescan = () => {
-    Alert.alert(
+    confirmAction(
       '운명 재스캔',
       '처음부터 다시 시작하시겠습니까?\n모든 진행 데이터가 초기화됩니다.',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '재스캔',
-          style: 'destructive',
-          onPress: () => {
-            resetStore();
-            router.replace('/(onboarding)/scan');
-          },
-        },
-      ]
+      () => { resetStore(); router.replace('/(onboarding)/scan'); },
     );
   };
 
   const handleReset = () => {
-    Alert.alert(
+    confirmAction(
       '데이터 초기화',
       '정말로 모든 데이터를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '삭제',
-          style: 'destructive',
-          onPress: () => {
-            resetStore();
-            router.replace('/(onboarding)/scan');
-          },
-        },
-      ]
+      () => { resetStore(); router.replace('/(onboarding)/scan'); },
     );
   };
 
   const handleLogout = () => {
-    Alert.alert(
+    confirmAction(
       '로그아웃',
       '로그아웃하면 처음 화면으로 돌아갑니다.\n저장된 데이터는 모두 초기화됩니다.',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '로그아웃',
-          style: 'destructive',
-          onPress: () => {
-            resetStore();
-            router.replace('/(onboarding)/scan');
-          },
-        },
-      ]
+      () => { resetStore(); router.replace('/(onboarding)/scan'); },
     );
   };
 
