@@ -253,7 +253,7 @@ export default function ResultScreen() {
 
         {/* 레이더 차트 */}
         <Animated.View entering={FadeIn.delay(500).duration(800)} style={styles.chartWrap}>
-          <OhangRadarChart data={sajuResult.ohang} size={Math.min(width * 0.78, 340)} />
+          <OhangRadarChart data={sajuResult.ohang} size={Math.min(width * 0.88, 380)} />
         </Animated.View>
 
         {/* 종합 해석 */}

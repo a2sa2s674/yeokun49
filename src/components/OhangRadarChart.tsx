@@ -118,11 +118,18 @@ interface Props {
 }
 
 export default function OhangRadarChart({ data, size = 280 }: Props) {
-  const cx = size / 2;
-  const cy = size / 2;
-  const maxR = size * 0.34;
-  const pad = size * 0.16;
-  const totalSize = size + pad * 2;
+  // ── 레이아웃: 밖에서 안으로 계산 ──
+  // totalSize = size (전달받은 크기가 곧 전체 컨테이너)
+  // 배지(44px) + 한자라벨(~28px) 여유 = 약 50px 마진 필요
+  const BADGE_SIZE = 40;
+  const BADGE_MARGIN = 50; // 배지 반지름 + 한자 라벨 여유
+  const totalSize = size;
+  const cx = totalSize / 2;
+  const cy = totalSize / 2;
+  // 차트 반지름: 전체 크기에서 배지 마진을 뺀 영역
+  const maxR = (totalSize / 2) - BADGE_MARGIN;
+  // 배지 위치 반지름: maxR + 약간의 여유 (배지 중심이 차트 바깥)
+  const badgeR = maxR + 26;
 
   // 진입 애니메이션 progress
   const progress = useSharedValue(0);
@@ -160,11 +167,11 @@ export default function OhangRadarChart({ data, size = 280 }: Props) {
     [totalSize]
   );
 
-  // 꼭짓점 좌표 (배지 배치용)
+  // 꼭짓점 좌표 (배지 배치용) — totalSize 기준 절대 좌표
   const badgePositions = useMemo(
     () =>
-      OHANG_ORDER.map((_, i) => getPoint(cx + pad, cy + pad, maxR + pad * 0.75, i)),
-    [cx, cy, maxR, pad]
+      OHANG_ORDER.map((_, i) => getPoint(cx, cy, badgeR, i)),
+    [cx, cy, badgeR]
   );
 
   return (
@@ -177,7 +184,7 @@ export default function OhangRadarChart({ data, size = 280 }: Props) {
       <Svg
         width={totalSize}
         height={totalSize}
-        viewBox={`${-pad} ${-pad} ${totalSize} ${totalSize}`}
+        viewBox={`0 0 ${totalSize} ${totalSize}`}
       >
         <Defs>
           <RadialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
@@ -264,46 +271,30 @@ export default function OhangRadarChart({ data, size = 280 }: Props) {
         })}
       </Svg>
 
-      {/* 오행 배지 */}
+      {/* 오행 배지 + 한자 라벨 (함께 배치) */}
       {OHANG_ORDER.map((key, i) => {
         const pos = badgePositions[i];
+        const half = BADGE_SIZE / 2;
         return (
           <View
             key={`b${i}`}
             style={[
               styles.badge,
               {
-                left: pos.x - 22,
-                top: pos.y - 22,
+                left: pos.x - half,
+                top: pos.y - half,
+                width: BADGE_SIZE,
+                height: BADGE_SIZE,
+                borderRadius: half,
                 backgroundColor: Colors.ohang[key],
               },
             ]}
           >
             <Text style={styles.badgeEmoji}>{OHANG_ICONS[key].emoji}</Text>
+            <Text style={[styles.badgeHanja, { color: '#FFF' }]}>
+              {OHANG_ICONS[key].label}
+            </Text>
           </View>
-        );
-      })}
-
-      {/* 오행 한자 라벨 (배지 옆) */}
-      {OHANG_ORDER.map((key, i) => {
-        const pos = badgePositions[i];
-        // 배지 옆 위치 조정
-        const offsetX = i === 0 ? 0 : i < 3 ? 28 : -28;
-        const offsetY = i === 0 ? -30 : i === 2 ? 30 : 0;
-        return (
-          <Text
-            key={`hl${i}`}
-            style={[
-              styles.hanjaLabel,
-              {
-                left: pos.x + offsetX - 12,
-                top: pos.y + offsetY - 10,
-                color: Colors.ohang[key],
-              },
-            ]}
-          >
-            {OHANG_ICONS[key].label}
-          </Text>
         );
       })}
     </View>
@@ -317,23 +308,22 @@ const styles = StyleSheet.create({
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   badge: {
     position: 'absolute',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2.5,
+    borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.35)',
   },
   badgeEmoji: {
-    fontSize: 18,
+    fontSize: 14,
+    marginTop: -1,
   },
-  hanjaLabel: {
-    position: 'absolute',
-    fontSize: 16,
+  badgeHanja: {
+    fontSize: 9,
     fontWeight: '800',
+    marginTop: -2,
   },
 });
