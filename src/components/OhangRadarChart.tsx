@@ -119,8 +119,8 @@ interface Props {
 export default function OhangRadarChart({ data, size = 280 }: Props) {
   const cx = size / 2;
   const cy = size / 2;
-  const maxR = size * 0.36;
-  const pad = size * 0.14;
+  const maxR = size * 0.40;
+  const pad = size * 0.12;
   const totalSize = size + pad * 2;
 
   // 진입 애니메이션 progress
@@ -245,7 +245,7 @@ export default function OhangRadarChart({ data, size = 280 }: Props) {
         {/* 퍼센트 라벨 */}
         {OHANG_ORDER.map((key, i) => {
           const val = data[key];
-          const labelR = maxR * Math.max(val / 100, 0.15) - 14;
+          const labelR = maxR * Math.max(val / 100, 0.18) + 12;
           const p = getPoint(cx, cy, labelR, i);
           return (
             <SvgText
