@@ -80,14 +80,45 @@ JSON만 출력하세요. 다른 텍스트, 마크다운, 코드블록 기호는 
 
 // ── Gemini 응답 파싱 ───────────────────────────────
 
-function parseGeminiResponse(text: string): SajuReadingResponse {
-  // 마크다운 코드 블록 제거 (혹시 포함된 경우)
-  let clean = text.trim();
-  if (clean.startsWith('```')) {
-    clean = clean.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+function extractJsonFromText(text: string): string {
+  // 1) 마크다운 코드 블록 내 JSON 추출
+  const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+  if (codeBlockMatch) {
+    return codeBlockMatch[1].trim();
   }
 
-  const parsed = JSON.parse(clean);
+  // 2) 첫 번째 { ... } 블록 추출 (중첩 브레이스 지원)
+  const firstBrace = text.indexOf('{');
+  if (firstBrace !== -1) {
+    let depth = 0;
+    let lastBrace = -1;
+    for (let i = firstBrace; i < text.length; i++) {
+      if (text[i] === '{') depth++;
+      else if (text[i] === '}') {
+        depth--;
+        if (depth === 0) {
+          lastBrace = i;
+          break;
+        }
+      }
+    }
+    if (lastBrace !== -1) {
+      return text.substring(firstBrace, lastBrace + 1);
+    }
+  }
+
+  // 3) 그대로 반환 (마지막 시도)
+  return text.trim();
+}
+
+function parseGeminiResponse(text: string): SajuReadingResponse {
+  const jsonStr = extractJsonFromText(text);
+
+  console.log('Gemini raw response length:', text.length);
+  console.log('Extracted JSON length:', jsonStr.length);
+  console.log('Extracted JSON preview:', jsonStr.substring(0, 200));
+
+  const parsed = JSON.parse(jsonStr);
 
   // 응답 구조 검증
   if (!parsed.summary || !Array.isArray(parsed.sections) || parsed.sections.length === 0) {
@@ -126,35 +157,51 @@ export const generateSajuReading = functions
           return;
         }
 
-        // Gemini API 키 가져오기
-        const apiKey = functions.config().gemini?.api_key;
+        // Gemini API 키 가져오기 (.env 파일에서 읽음)
+        const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) {
-          console.error('Gemini API key not configured. Run: firebase functions:config:set gemini.api_key="YOUR_KEY"');
+          console.error('GEMINI_API_KEY not set. Add it to functions/.env file.');
           res.status(500).json({ error: 'AI service not configured' });
           return;
         }
 
-        // Gemini 호출
+        // Gemini 호출 (fallback 모델 지원)
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({
-          model: 'gemini-2.0-flash',
-          generationConfig: {
-            temperature: 0.7,
-            topP: 0.9,
-            maxOutputTokens: 2048,
-            responseMimeType: 'application/json',
-          },
-        });
-
+        const models = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
         const prompt = buildSajuPrompt(data);
-        const result = await model.generateContent(prompt);
-        const text = result.response.text();
+        let text = '';
+
+        for (const modelName of models) {
+          try {
+            console.log(`Calling ${modelName}...`);
+            const model = genAI.getGenerativeModel({
+              model: modelName,
+              generationConfig: {
+                temperature: 0.7,
+                topP: 0.9,
+                maxOutputTokens: 4096,
+              },
+            });
+
+            const result = await model.generateContent(prompt);
+            text = result.response.text();
+            console.log(`${modelName} response received, length:`, text.length);
+            break; // 성공 시 루프 종료
+          } catch (modelError: any) {
+            console.warn(`${modelName} failed:`, modelError?.message);
+            if (modelName === models[models.length - 1]) {
+              throw modelError; // 마지막 모델도 실패 시 에러 전파
+            }
+            console.log('Trying fallback model...');
+          }
+        }
 
         const parsed = parseGeminiResponse(text);
 
         res.status(200).json(parsed);
       } catch (error: any) {
         console.error('generateSajuReading error:', error?.message || error);
+        console.error('Full error:', JSON.stringify(error, null, 2));
         res.status(500).json({
           error: 'Failed to generate saju reading',
           message: error?.message || 'Unknown error',

@@ -43,4 +43,5 @@ yarn-error.*
 # Firebase
 functions/lib/
 functions/node_modules/
+functions/.env
 .firebase/
