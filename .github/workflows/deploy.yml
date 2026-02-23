@@ -31,6 +31,14 @@ jobs:
         env:
           NODE_ENV: production
 
+      # import.meta.env 폴리필 — Zustand devtools가 import.meta.env.MODE를 사용하는데
+      # Metro 웹 번들러가 이를 처리하지 못해 런타임 에러 발생
+      - name: Patch import.meta in bundle
+        run: |
+          find dist -name '*.js' -exec sed -i 's/import\.meta\.env?import\.meta\.env\.MODE:void 0/"production"/g' {} +
+          find dist -name '*.js' -exec sed -i 's/import\.meta\.env/undefined/g' {} +
+          find dist -name '*.js' -exec sed -i 's/import\.meta/\({}\)/g' {} +
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
