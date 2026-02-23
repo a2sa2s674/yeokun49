@@ -14,8 +14,8 @@ const FUNCTION_BASE_URL =
     ? `http://127.0.0.1:5001/${FIREBASE_PROJECT_ID}/${FUNCTION_REGION}`
     : `https://${FUNCTION_REGION}-${FIREBASE_PROJECT_ID}.cloudfunctions.net`;
 
-/** 요청 타임아웃 (15초) */
-const TIMEOUT_MS = 15000;
+/** 요청 타임아웃 (60초 — Gemini 2.5-flash thinking 모델은 응답이 느릴 수 있음) */
+const TIMEOUT_MS = 60000;
 
 export interface FetchSajuReadingParams {
   pillars: { year: string; month: string; day: string; time: string };
