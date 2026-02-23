@@ -269,9 +269,11 @@ function AiInterpretationCard({ reading }: { reading: SajuReading }) {
 function SettingsMenu({
   onRescan,
   onReset,
+  onLogout,
 }: {
   onRescan: () => void;
   onReset: () => void;
+  onLogout: () => void;
 }) {
   const [notificationEnabled, setNotificationEnabled] = useState(true);
 
@@ -319,6 +321,16 @@ function SettingsMenu({
         </View>
         <Text style={styles.menuVersion}>v1.0.0</Text>
       </View>
+
+      <View style={styles.menuDivider} />
+
+      <Pressable style={styles.menuItem} onPress={onLogout}>
+        <View style={styles.menuLeft}>
+          <Text style={styles.menuIcon}>🚪</Text>
+          <Text style={[styles.menuText, { color: '#EF4444' }]}>로그아웃</Text>
+        </View>
+        <Text style={styles.menuArrow}>›</Text>
+      </Pressable>
     </Animated.View>
   );
 }
@@ -381,6 +393,24 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleLogout = () => {
+    Alert.alert(
+      '로그아웃',
+      '로그아웃하면 처음 화면으로 돌아갑니다.\n저장된 데이터는 모두 초기화됩니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '로그아웃',
+          style: 'destructive',
+          onPress: () => {
+            resetStore();
+            router.replace('/(onboarding)/scan');
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
@@ -400,7 +430,7 @@ export default function SettingsScreen() {
         {sajuReading && <AiInterpretationCard reading={sajuReading} />}
         <ProgressCard dayIndex={dayIndex} questStartDate={questStartDate} />
         <GuardianInfoCard guardianId={guardianId} subGuardians={subGuardians} />
-        <SettingsMenu onRescan={handleRescan} onReset={handleReset} />
+        <SettingsMenu onRescan={handleRescan} onReset={handleReset} onLogout={handleLogout} />
         <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
