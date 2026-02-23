@@ -4,18 +4,7 @@
  */
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Platform } from 'react-native';
 import type { OhangStats, OhangKey, Quest } from '../types';
-
-// 웹에서는 localStorage, 네이티브에서는 AsyncStorage 사용
-const getStorage = () => {
-  if (Platform.OS === 'web') {
-    return createJSONStorage(() => localStorage);
-  }
-  // 네이티브: 동적 import로 AsyncStorage 로드
-  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-  return createJSONStorage(() => AsyncStorage);
-};
 
 // ── 타입 정의 ────────────────────────────────────
 
@@ -192,7 +181,8 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'yeokun49-storage',
-      storage: getStorage(),
+      // 웹에서는 localStorage 사용 (AsyncStorage는 import.meta 이슈 있음)
+      storage: createJSONStorage(() => localStorage),
     }
   )
 );
