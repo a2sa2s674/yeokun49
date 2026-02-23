@@ -63,8 +63,9 @@ function dataPoints(
   data: OhangStats, progress: number
 ): string {
   return OHANG_ORDER.map((key, i) => {
-    const v = (data[key] / 100) * progress;
-    const r = maxR * Math.max(v, 0.03);
+    // 최소 20% + 실제 값의 80%로 스케일링 → 작은 값도 잘 보임
+    const v = (0.20 + (data[key] / 100) * 0.80) * progress;
+    const r = maxR * v;
     const p = getPoint(cx, cy, r, i);
     return `${p.x},${p.y}`;
   }).join(' ');
@@ -229,8 +230,8 @@ export default function OhangRadarChart({ data, size = 280 }: Props) {
 
         {/* 데이터 꼭짓점 원 */}
         {OHANG_ORDER.map((key, i) => {
-          const v = (data[key] / 100) * progressJS;
-          const p = getPoint(cx, cy, maxR * Math.max(v, 0.03), i);
+          const v = 0.20 + (data[key] / 100) * 0.80;
+          const p = getPoint(cx, cy, maxR * v, i);
           return (
             <SvgCircle
               key={`d${i}`}
@@ -245,15 +246,15 @@ export default function OhangRadarChart({ data, size = 280 }: Props) {
         {/* 퍼센트 라벨 */}
         {OHANG_ORDER.map((key, i) => {
           const val = data[key];
-          const labelR = maxR * Math.max(val / 100, 0.18) + 12;
+          const labelR = maxR * (0.20 + (val / 100) * 0.80) + 14;
           const p = getPoint(cx, cy, labelR, i);
           return (
             <SvgText
               key={`l${i}`}
               x={p.x} y={p.y + 3}
               fill="#FFFFFF"
-              fontSize={9}
-              fontWeight="600"
+              fontSize={11}
+              fontWeight="700"
               textAnchor="middle"
               opacity={0.85}
             >
