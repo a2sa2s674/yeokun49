@@ -120,8 +120,8 @@ interface Props {
 export default function OhangRadarChart({ data, size = 280 }: Props) {
   const cx = size / 2;
   const cy = size / 2;
-  const maxR = size * 0.40;
-  const pad = size * 0.12;
+  const maxR = size * 0.34;
+  const pad = size * 0.16;
   const totalSize = size + pad * 2;
 
   // 진입 애니메이션 progress
