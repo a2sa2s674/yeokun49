@@ -4,7 +4,7 @@
  */
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { OhangStats, OhangKey, Quest } from '../types';
+import type { OhangStats, OhangKey, Quest, SajuReading } from '../types';
 
 // ── 타입 정의 ────────────────────────────────────
 
@@ -57,6 +57,10 @@ interface AppState {
   // ── 온보딩 완료 ──
   onboardingComplete: boolean;
 
+  // ── AI 사주 풀이 ──
+  sajuReading: SajuReading | null;
+  sajuReadingLoading: boolean;
+
   // ── 액션 ──
   setUserProfile: (profile: {
     userName: string;
@@ -76,6 +80,8 @@ interface AppState {
   setTodayQuests: (quests: Quest[]) => void;
   addSubGuardian: (sub: SubGuardian) => void;
   markNotificationRead: () => void;
+  setSajuReading: (reading: SajuReading) => void;
+  setSajuReadingLoading: (loading: boolean) => void;
   resetStore: () => void;
 }
 
@@ -105,6 +111,8 @@ export const useAppStore = create<AppState>()(
       subGuardians: [],
       hasUnreadNotification: true,
       onboardingComplete: false,
+      sajuReading: null,
+      sajuReadingLoading: false,
 
       // 액션
       setUserProfile: (profile) =>
@@ -159,6 +167,12 @@ export const useAppStore = create<AppState>()(
       markNotificationRead: () =>
         set({ hasUnreadNotification: false }),
 
+      setSajuReading: (reading) =>
+        set({ sajuReading: reading, sajuReadingLoading: false }),
+
+      setSajuReadingLoading: (loading) =>
+        set({ sajuReadingLoading: loading }),
+
       resetStore: () =>
         set({
           userName: '',
@@ -177,6 +191,8 @@ export const useAppStore = create<AppState>()(
           subGuardians: [],
           hasUnreadNotification: true,
           onboardingComplete: false,
+          sajuReading: null,
+          sajuReadingLoading: false,
         }),
     }),
     {

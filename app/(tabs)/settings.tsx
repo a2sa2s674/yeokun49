@@ -21,6 +21,7 @@ import { useAppStore } from '../../src/store';
 import { getGuardianById } from '../../src/data/guardians';
 import OhangRadarChart from '../../src/components/OhangRadarChart';
 import { AppColors, Colors } from '../../src/styles/tokens';
+import type { SajuReading } from '../../src/types';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -218,6 +219,51 @@ function GuardianInfoCard({
 }
 
 // ═══════════════════════════════════════════════════
+// AI 사주 풀이 카드
+// ═══════════════════════════════════════════════════
+function AiInterpretationCard({ reading }: { reading: SajuReading }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <Animated.View entering={SlideInUp.delay(250).duration(500)} style={styles.card}>
+      <Pressable
+        onPress={() => setExpanded(!expanded)}
+        style={styles.aiCardHeader}
+      >
+        <View style={{ flex: 1 }}>
+          <Text style={styles.cardTitle}>🔮 AI 사주 풀이</Text>
+        </View>
+        <Text style={styles.aiToggle}>{expanded ? '▾' : '›'}</Text>
+      </Pressable>
+      <View style={styles.divider} />
+
+      {expanded ? (
+        <View>
+          {reading.sections.map((section) => (
+            <View key={section.title} style={styles.aiSectionItem}>
+              <Text style={styles.aiSectionTitle}>
+                {section.icon} {section.title}
+              </Text>
+              <Text style={styles.aiSectionContent}>{section.content}</Text>
+            </View>
+          ))}
+          <Text style={styles.aiGeneratedAt}>
+            생성일: {new Date(reading.generatedAt).toLocaleDateString('ko-KR')}
+          </Text>
+        </View>
+      ) : (
+        <View>
+          <Text style={styles.aiSummaryText}>
+            {reading.summary || '터치하여 상세 풀이 보기'}
+          </Text>
+          <Text style={styles.aiExpandHint}>터치하여 전체 보기</Text>
+        </View>
+      )}
+    </Animated.View>
+  );
+}
+
+// ═══════════════════════════════════════════════════
 // 설정 메뉴 리스트
 // ═══════════════════════════════════════════════════
 function SettingsMenu({
@@ -295,6 +341,7 @@ export default function SettingsScreen() {
     dayIndex,
     points,
     subGuardians,
+    sajuReading,
     resetStore,
   } = useAppStore();
 
@@ -350,6 +397,7 @@ export default function SettingsScreen() {
           strongestElement={strongestElement}
           weakestElement={weakestElement}
         />
+        {sajuReading && <AiInterpretationCard reading={sajuReading} />}
         <ProgressCard dayIndex={dayIndex} questStartDate={questStartDate} />
         <GuardianInfoCard guardianId={guardianId} subGuardians={subGuardians} />
         <SettingsMenu onRescan={handleRescan} onReset={handleReset} />
@@ -468,4 +516,27 @@ const styles = StyleSheet.create({
   menuArrow: { fontSize: 22, color: AppColors.textMuted, fontWeight: '300' },
   menuVersion: { fontSize: 13, color: AppColors.textMuted },
   menuDivider: { height: 1, backgroundColor: AppColors.inputBorder },
+
+  // ── AI 풀이 카드 ──
+  aiCardHeader: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  aiToggle: { fontSize: 22, color: AppColors.textMuted, fontWeight: '300' },
+  aiSectionItem: { marginBottom: 14 },
+  aiSectionTitle: {
+    fontSize: 14, fontWeight: '700', color: AppColors.textDark, marginBottom: 4,
+  },
+  aiSectionContent: {
+    fontSize: 13, color: AppColors.textLight, lineHeight: 20,
+  },
+  aiSummaryText: {
+    fontSize: 14, color: AppColors.purpleMain, fontWeight: '600',
+  },
+  aiExpandHint: {
+    fontSize: 12, color: AppColors.textMuted, marginTop: 4,
+  },
+  aiGeneratedAt: {
+    fontSize: 11, color: AppColors.textMuted, textAlign: 'right', marginTop: 4,
+  },
 });

@@ -1,8 +1,8 @@
 /**
  * 운명 스캔 결과 페이지
- * 사주팔자 오행 분석 결과 + 레이더 차트 + 강점/약점 카드
+ * 사주팔자 오행 분석 결과 + 레이더 차트 + 강점/약점 카드 + AI 심층 풀이
  */
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -26,9 +26,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import OhangRadarChart from '../../src/components/OhangRadarChart';
 import { calculateOhang, getOhangInterpretation } from '../../src/lib/saju';
+import { fetchSajuReading } from '../../src/services/gemini';
 import { Colors } from '../../src/styles/tokens';
 import { useAppStore } from '../../src/store';
-import type { OhangKey } from '../../src/types';
+import type { OhangKey, SajuReadingSection } from '../../src/types';
 
 const { width } = Dimensions.get('window');
 
@@ -126,6 +127,32 @@ function InterpretationCard({
   );
 }
 
+// ── AI 풀이 카드 ──────────────────────────────────
+
+function AiReadingCard({
+  section,
+  index,
+}: {
+  section: SajuReadingSection;
+  index: number;
+}) {
+  return (
+    <View style={[cardStyles.card, { borderColor: PURPLE_MAIN, borderLeftWidth: 4 }]}>
+      <View style={cardStyles.header}>
+        <View style={[cardStyles.indexBadge, { backgroundColor: '#7C3AED' }]}>
+          <Text style={cardStyles.indexText}>{index + 1}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={cardStyles.title}>
+            {section.icon} {section.title}
+          </Text>
+        </View>
+      </View>
+      <Text style={cardStyles.description}>{section.content}</Text>
+    </View>
+  );
+}
+
 const cardStyles = StyleSheet.create({
   card: {
     marginHorizontal: 24,
@@ -191,6 +218,14 @@ export default function ResultScreen() {
 
   const [isCalculating, setIsCalculating] = useState(true);
 
+  // AI 풀이 상태
+  const [aiSections, setAiSections] = useState<SajuReadingSection[]>([]);
+  const [aiSummary, setAiSummary] = useState('');
+  const [aiGeneratedAt, setAiGeneratedAt] = useState('');
+  const [aiLoading, setAiLoading] = useState(true);
+  const [aiError, setAiError] = useState(false);
+  const aiCalledRef = useRef(false);
+
   // 사주 계산
   const sajuResult = useMemo(() => {
     return calculateOhang({
@@ -214,6 +249,40 @@ export default function ResultScreen() {
     return () => clearTimeout(timer);
   }, []);
 
+  // AI 풀이 호출 (로딩 애니메이션과 동시 시작)
+  useEffect(() => {
+    if (aiCalledRef.current) return;
+    aiCalledRef.current = true;
+
+    let cancelled = false;
+
+    fetchSajuReading({
+      pillars: sajuResult.pillars,
+      ohang: sajuResult.ohang,
+      strongest: sajuResult.strongest,
+      weakest: sajuResult.weakest,
+      gender: (params.gender as '남' | '여') ?? '남',
+      name: params.name ?? '',
+    })
+      .then((reading) => {
+        if (!cancelled) {
+          setAiSections(reading.sections || []);
+          setAiSummary(reading.summary || '');
+          setAiGeneratedAt(reading.generatedAt || '');
+          setAiLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.warn('AI saju reading failed:', err);
+        if (!cancelled) {
+          setAiError(true);
+          setAiLoading(false);
+        }
+      });
+
+    return () => { cancelled = true; };
+  }, [sajuResult]);
+
   // CTA 버튼 애니메이션
   const buttonScale = useSharedValue(1);
   const buttonAnimStyle = useAnimatedStyle(() => ({
@@ -221,16 +290,31 @@ export default function ResultScreen() {
   }));
 
   const handleNext = () => {
+    const birthDate = `${params.year}-${(params.month ?? '1').padStart(2, '0')}-${(params.day ?? '1').padStart(2, '0')}`;
+    const birthTimeVal = params.birthTime === '모름' ? null : params.birthTime ?? null;
+    const genderVal = (params.gender as '남' | '여') ?? '남';
+
     // Zustand 스토어에 유저 프로필 저장
     useAppStore.getState().setUserProfile({
       userName: params.name ?? '',
-      birthDate: `${params.year}-${(params.month ?? '1').padStart(2, '0')}-${(params.day ?? '1').padStart(2, '0')}`,
-      birthTime: params.birthTime === '모름' ? null : params.birthTime ?? null,
-      gender: (params.gender as '남' | '여') ?? '남',
+      birthDate,
+      birthTime: birthTimeVal,
+      gender: genderVal,
       ohang: sajuResult.ohang,
       weakestElement: sajuResult.weakest,
       strongestElement: sajuResult.strongest,
     });
+
+    // AI 풀이 저장 (있으면)
+    if (aiSections.length > 0) {
+      const cacheKey = `${birthDate}|${birthTimeVal ?? 'null'}|${genderVal}`;
+      useAppStore.getState().setSajuReading({
+        sections: aiSections,
+        summary: aiSummary,
+        generatedAt: aiGeneratedAt,
+        cacheKey,
+      });
+    }
 
     buttonScale.value = withSpring(0.95, {}, () => {
       buttonScale.value = withSpring(1);
@@ -297,6 +381,39 @@ export default function ResultScreen() {
           />
         </Animated.View>
 
+        {/* ── AI 심층 사주 풀이 ── */}
+        {!aiError && (
+          <Animated.View entering={FadeIn.delay(1500).duration(600)}>
+            <View style={styles.aiSectionHeader}>
+              <View style={styles.aiTitleRow}>
+                <Text style={styles.aiStar}>✦</Text>
+                <Text style={styles.aiSectionTitle}>AI 심층 사주 풀이</Text>
+                <Text style={styles.aiStar}>✦</Text>
+              </View>
+              <Text style={styles.aiSectionSubtitle}>
+                Gemini AI가 분석한 상세 운세
+              </Text>
+            </View>
+
+            {aiLoading ? (
+              <View style={styles.aiLoadingWrap}>
+                <ActivityIndicator color={PURPLE_MAIN} size="small" />
+                <Text style={styles.aiLoadingText}>AI가 심층 분석 중...</Text>
+                <Text style={styles.aiLoadingHint}>잠시만 기다려 주세요</Text>
+              </View>
+            ) : (
+              aiSections.map((section, idx) => (
+                <Animated.View
+                  key={section.title}
+                  entering={SlideInUp.delay(1700 + idx * 200).duration(500)}
+                >
+                  <AiReadingCard section={section} index={idx} />
+                </Animated.View>
+              ))
+            )}
+          </Animated.View>
+        )}
+
         {/* CTA */}
         <Animated.View entering={FadeIn.delay(1600).duration(600)} style={styles.ctaSection}>
           <Text style={styles.ctaText}>{interpretation.ctaText}</Text>
@@ -360,6 +477,64 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     lineHeight: 24,
   },
+
+  // ── AI 풀이 섹션 ──
+  aiSectionHeader: {
+    alignItems: 'center',
+    marginHorizontal: 24,
+    marginTop: 20,
+    marginBottom: 16,
+  },
+  aiTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  aiStar: {
+    fontSize: 14,
+    color: PURPLE_MAIN,
+  },
+  aiSectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: PURPLE_MAIN,
+  },
+  aiSectionSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  aiLoadingWrap: {
+    alignItems: 'center',
+    paddingVertical: 30,
+    marginHorizontal: 24,
+    backgroundColor: CARD_BG,
+    borderRadius: 14,
+    marginBottom: 14,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: { elevation: 3 },
+      web: { boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
+    }),
+  },
+  aiLoadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    fontWeight: '600',
+    color: TEXT_DARK,
+  },
+  aiLoadingHint: {
+    marginTop: 4,
+    fontSize: 12,
+    color: '#9CA3AF',
+  },
+
+  // ── CTA ──
   ctaSection: {
     alignItems: 'center',
     marginTop: 6,

@@ -46,3 +46,19 @@ export interface ChatMessage {
   content: string;
   timestamp: number;
 }
+
+// ── AI 사주 풀이 ──────────────────────────────────
+
+export interface SajuReadingSection {
+  title: string;   // "성격/성향", "재운(財運)" 등
+  icon: string;    // "🧬", "💰" 등
+  content: string; // AI 생성 텍스트
+}
+
+export interface SajuReading {
+  sections: SajuReadingSection[];
+  summary: string;
+  generatedAt: string;
+  /** 캐시 키: "birthDate|birthTime|gender" 형식으로 중복 호출 방지 */
+  cacheKey: string;
+}
