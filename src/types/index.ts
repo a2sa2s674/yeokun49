@@ -29,6 +29,10 @@ export interface Quest {
   difficulty: 1 | 2 | 3;
   completed: boolean;
   point: number;
+  /** 특별 미션 여부 (사진 인증 필요) */
+  isSpecial?: boolean;
+  /** 특별 미션 인증 사진 URI */
+  photoUri?: string | null;
 }
 
 export interface Guardian {

@@ -41,6 +41,9 @@ interface AppState {
   questStartDate: string | null;
   dayIndex: number;
 
+  // ── 길/흉 게이지 (0~100, 50이 중립) ──
+  fortuneGauge: number;
+
   // ── 포인트 ──
   points: number;
 
@@ -80,6 +83,9 @@ interface AppState {
   setTodayQuests: (quests: Quest[]) => void;
   addSubGuardian: (sub: SubGuardian) => void;
   markNotificationRead: () => void;
+  setFortuneGauge: (value: number) => void;
+  adjustFortuneGauge: (delta: number) => void;
+  setQuestPhoto: (questId: string, photoUri: string) => void;
   setSajuReading: (reading: SajuReading) => void;
   setSajuReadingLoading: (loading: boolean) => void;
   resetStore: () => void;
@@ -105,6 +111,7 @@ export const useAppStore = create<AppState>()(
       guardianId: null,
       questStartDate: null,
       dayIndex: 0,
+      fortuneGauge: 50,
       points: 1200,
       dailyWarning: null,
       todayQuests: [],
@@ -147,11 +154,18 @@ export const useAppStore = create<AppState>()(
         })),
 
       completeQuest: (questId) =>
-        set((state) => ({
-          todayQuests: state.todayQuests.map((q) =>
-            q.id === questId ? { ...q, completed: true } : q
-          ),
-        })),
+        set((state) => {
+          const quest = state.todayQuests.find((q) => q.id === questId);
+          const pointsToAdd = quest && !quest.completed ? quest.point : 0;
+          const gaugeBoost = quest && !quest.completed ? (quest.isSpecial ? 8 : 4) : 0;
+          return {
+            todayQuests: state.todayQuests.map((q) =>
+              q.id === questId ? { ...q, completed: true } : q
+            ),
+            points: state.points + pointsToAdd,
+            fortuneGauge: Math.min(100, state.fortuneGauge + gaugeBoost),
+          };
+        }),
 
       setDailyWarning: (warning) =>
         set({ dailyWarning: warning }),
@@ -166,6 +180,21 @@ export const useAppStore = create<AppState>()(
 
       markNotificationRead: () =>
         set({ hasUnreadNotification: false }),
+
+      setFortuneGauge: (value) =>
+        set({ fortuneGauge: Math.max(0, Math.min(100, value)) }),
+
+      adjustFortuneGauge: (delta) =>
+        set((state) => ({
+          fortuneGauge: Math.max(0, Math.min(100, state.fortuneGauge + delta)),
+        })),
+
+      setQuestPhoto: (questId, photoUri) =>
+        set((state) => ({
+          todayQuests: state.todayQuests.map((q) =>
+            q.id === questId ? { ...q, photoUri } : q
+          ),
+        })),
 
       setSajuReading: (reading) =>
         set({ sajuReading: reading, sajuReadingLoading: false }),
@@ -185,6 +214,7 @@ export const useAppStore = create<AppState>()(
           guardianId: null,
           questStartDate: null,
           dayIndex: 0,
+          fortuneGauge: 50,
           points: 1200,
           dailyWarning: null,
           todayQuests: [],
