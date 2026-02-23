@@ -14,6 +14,25 @@ export const Colors = {
   },
 } as const;
 
+/** 크림 라이트 테마 (온보딩 + 로비 공용) */
+export const AppColors = {
+  cream: '#F5F0E8',
+  purpleMain: '#6B21A8',
+  purpleLight: '#C4B5D9',
+  purpleBg: '#E8E0F0',
+  purpleDark: '#4C1D95',
+  goldBorder: '#C9B87A',
+  goldAccent: '#D4AF37',
+  cardBg: 'rgba(255,255,255,0.80)',
+  surface: '#FFFFFF',
+  textDark: '#2D2D2D',
+  textMuted: '#9CA3AF',
+  textLight: '#6B7280',
+  inputBg: '#F9F7F4',
+  inputBorder: '#E5E2DC',
+  tabBorder: '#E5E2DC',
+} as const;
+
 export const Spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;
 
 export const FontSize = { sm: 12, md: 14, lg: 18, xl: 24, xxl: 32 } as const;

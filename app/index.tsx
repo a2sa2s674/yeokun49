@@ -11,6 +11,7 @@ import Animated, {
   Easing,
   runOnJS,
 } from 'react-native-reanimated';
+import { useAppStore } from '../src/store';
 
 const { width, height } = Dimensions.get('window');
 
@@ -150,7 +151,13 @@ export default function SplashAnimated() {
 
   useEffect(() => {
     if (ready) {
-      router.replace('/(onboarding)/scan');
+      // 온보딩 완료 여부에 따라 분기
+      const { onboardingComplete, guardianId } = useAppStore.getState();
+      if (onboardingComplete && guardianId) {
+        router.replace('/(tabs)/dashboard');
+      } else {
+        router.replace('/(onboarding)/scan');
+      }
     }
   }, [ready]);
 

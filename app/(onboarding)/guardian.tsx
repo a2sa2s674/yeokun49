@@ -28,6 +28,7 @@ import { GUARDIANS, getRecommendedGuardian } from '../../src/data/guardians';
 import type { GuardianData } from '../../src/data/guardians';
 import type { OhangKey } from '../../src/types';
 import { Colors } from '../../src/styles/tokens';
+import { useAppStore } from '../../src/store';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 const CARD_W = SCREEN_W * 0.78;
@@ -348,10 +349,15 @@ export default function GuardianScreen() {
 
   const handleSelect = () => {
     const selected = sortedGuardians[activeIndex];
+
+    // Zustand 스토어에 수호신 저장 + 49일 퀘스트 시작
+    const store = useAppStore.getState();
+    store.setGuardian(selected.id);
+    store.startQuest49();
+
     buttonScale.value = withSpring(0.95, {}, () => {
       buttonScale.value = withSpring(1);
     });
-    // TODO: Zustand 스토어에 선택한 수호신 저장 후 대시보드로 이동
     router.replace('/(tabs)/dashboard');
   };
 

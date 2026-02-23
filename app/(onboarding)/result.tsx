@@ -27,6 +27,7 @@ import Animated, {
 import OhangRadarChart from '../../src/components/OhangRadarChart';
 import { calculateOhang, getOhangInterpretation } from '../../src/lib/saju';
 import { Colors } from '../../src/styles/tokens';
+import { useAppStore } from '../../src/store';
 import type { OhangKey } from '../../src/types';
 
 const { width } = Dimensions.get('window');
@@ -220,6 +221,17 @@ export default function ResultScreen() {
   }));
 
   const handleNext = () => {
+    // Zustand 스토어에 유저 프로필 저장
+    useAppStore.getState().setUserProfile({
+      userName: params.name ?? '',
+      birthDate: `${params.year}-${(params.month ?? '1').padStart(2, '0')}-${(params.day ?? '1').padStart(2, '0')}`,
+      birthTime: params.birthTime === '모름' ? null : params.birthTime ?? null,
+      gender: (params.gender as '남' | '여') ?? '남',
+      ohang: sajuResult.ohang,
+      weakestElement: sajuResult.weakest,
+      strongestElement: sajuResult.strongest,
+    });
+
     buttonScale.value = withSpring(0.95, {}, () => {
       buttonScale.value = withSpring(1);
     });
