@@ -1,10 +1,15 @@
 /**
- * Firebase Cloud Function: generateSajuReading
- * Gemini AI를 사용하여 사주팔자 심층 풀이를 생성합니다.
+ * Firebase Cloud Functions for yeokun49
+ * 1) generateSajuReading — Gemini AI 사주 풀이
+ * 2) verifyKakaoToken — 카카오 로그인 → Firebase Custom Token
  */
 import * as functions from 'firebase-functions';
+import * as admin from 'firebase-admin';
 import cors from 'cors';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+
+// Firebase Admin 초기화
+admin.initializeApp();
 
 // CORS 설정 (모든 origin 허용 — GitHub Pages 등)
 const corsHandler = cors({ origin: true });
@@ -205,6 +210,125 @@ export const generateSajuReading = functions
         console.error('Full error:', JSON.stringify(error, null, 2));
         res.status(500).json({
           error: 'Failed to generate saju reading',
+          message: error?.message || 'Unknown error',
+        });
+      }
+    });
+  });
+
+// ═══════════════════════════════════════════════════════════
+// 카카오 로그인 → Firebase Custom Token 발급
+// ═══════════════════════════════════════════════════════════
+
+interface KakaoTokenResponse {
+  access_token: string;
+  token_type: string;
+  refresh_token?: string;
+  expires_in: number;
+  scope?: string;
+}
+
+interface KakaoUserResponse {
+  id: number;
+  kakao_account?: {
+    email?: string;
+    profile?: {
+      nickname?: string;
+    };
+  };
+}
+
+export const verifyKakaoToken = functions
+  .region('asia-northeast3')
+  .runWith({ timeoutSeconds: 30, memory: '256MB' })
+  .https.onRequest((req, res) => {
+    corsHandler(req, res, async () => {
+      if (req.method !== 'POST') {
+        res.status(405).json({ error: 'Method not allowed' });
+        return;
+      }
+
+      try {
+        const { code, redirectUri } = req.body;
+
+        if (!code || !redirectUri) {
+          res.status(400).json({ error: 'Missing required fields: code, redirectUri' });
+          return;
+        }
+
+        const kakaoRestApiKey = process.env.KAKAO_REST_API_KEY;
+        if (!kakaoRestApiKey) {
+          console.error('KAKAO_REST_API_KEY not set in .env');
+          res.status(500).json({ error: 'Kakao service not configured' });
+          return;
+        }
+
+        // 1) 인가 코드 → 카카오 액세스 토큰 교환
+        const tokenResponse = await fetch('https://kauth.kakao.com/oauth/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            grant_type: 'authorization_code',
+            client_id: kakaoRestApiKey,
+            redirect_uri: redirectUri,
+            code,
+          }).toString(),
+        });
+
+        if (!tokenResponse.ok) {
+          const errText = await tokenResponse.text();
+          console.error('Kakao token exchange failed:', errText);
+          res.status(401).json({ error: 'Failed to exchange Kakao auth code' });
+          return;
+        }
+
+        const tokenData = (await tokenResponse.json()) as KakaoTokenResponse;
+
+        // 2) 액세스 토큰으로 카카오 사용자 정보 조회
+        const userResponse = await fetch('https://kapi.kakao.com/v2/user/me', {
+          headers: { Authorization: `Bearer ${tokenData.access_token}` },
+        });
+
+        if (!userResponse.ok) {
+          const errText = await userResponse.text();
+          console.error('Kakao user info failed:', errText);
+          res.status(401).json({ error: 'Failed to get Kakao user info' });
+          return;
+        }
+
+        const kakaoUser = (await userResponse.json()) as KakaoUserResponse;
+
+        // 3) Firebase 사용자 생성 또는 조회
+        const kakaoUid = `kakao:${kakaoUser.id}`;
+        const email = kakaoUser.kakao_account?.email || `${kakaoUser.id}@kakao.yeokun49.app`;
+        const displayName = kakaoUser.kakao_account?.profile?.nickname || '카카오 사용자';
+
+        let firebaseUser;
+        try {
+          firebaseUser = await admin.auth().getUser(kakaoUid);
+        } catch (error: any) {
+          if (error.code === 'auth/user-not-found') {
+            // 새 사용자 생성
+            firebaseUser = await admin.auth().createUser({
+              uid: kakaoUid,
+              email,
+              displayName,
+            });
+            console.log('Created new Firebase user for Kakao:', kakaoUid);
+          } else {
+            throw error;
+          }
+        }
+
+        // 4) Firebase Custom Token 생성
+        const firebaseToken = await admin.auth().createCustomToken(kakaoUid);
+
+        console.log('Kakao login success. uid:', kakaoUid);
+        res.status(200).json({ firebaseToken, uid: kakaoUid, email, displayName });
+      } catch (error: any) {
+        console.error('verifyKakaoToken error:', error?.message || error);
+        res.status(500).json({
+          error: 'Kakao login failed',
           message: error?.message || 'Unknown error',
         });
       }

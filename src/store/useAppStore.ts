@@ -25,6 +25,11 @@ export interface SubGuardian {
 }
 
 interface AppState {
+  // ── 인증 ──
+  userId: string | null;
+  userEmail: string | null;
+  loginProvider: 'google' | 'kakao' | null;
+
   // ── 유저 프로필 ──
   userName: string;
   birthDate: string;
@@ -65,6 +70,8 @@ interface AppState {
   sajuReadingLoading: boolean;
 
   // ── 액션 ──
+  setAuthUser: (userId: string, email: string, provider: 'google' | 'kakao') => void;
+  clearAuth: () => void;
   setUserProfile: (profile: {
     userName: string;
     birthDate: string;
@@ -101,6 +108,9 @@ export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       // 초기값
+      userId: null,
+      userEmail: null,
+      loginProvider: null,
       userName: '',
       birthDate: '',
       birthTime: null,
@@ -122,6 +132,12 @@ export const useAppStore = create<AppState>()(
       sajuReadingLoading: false,
 
       // 액션
+      setAuthUser: (userId, email, provider) =>
+        set({ userId, userEmail: email, loginProvider: provider }),
+
+      clearAuth: () =>
+        set({ userId: null, userEmail: null, loginProvider: null }),
+
       setUserProfile: (profile) =>
         set({
           userName: profile.userName,
@@ -204,6 +220,9 @@ export const useAppStore = create<AppState>()(
 
       resetStore: () =>
         set({
+          userId: null,
+          userEmail: null,
+          loginProvider: null,
           userName: '',
           birthDate: '',
           birthTime: null,

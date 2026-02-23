@@ -151,11 +151,16 @@ export default function SplashAnimated() {
 
   useEffect(() => {
     if (ready) {
-      // 온보딩 완료 여부에 따라 분기
-      const { onboardingComplete, guardianId } = useAppStore.getState();
-      if (onboardingComplete && guardianId) {
+      const { userId, onboardingComplete, guardianId } = useAppStore.getState();
+
+      if (!userId) {
+        // 미로그인 → 로그인 화면
+        router.replace('/(auth)/login');
+      } else if (onboardingComplete && guardianId) {
+        // 로그인 + 온보딩 완료 → 대시보드
         router.replace('/(tabs)/dashboard');
       } else {
+        // 로그인 + 온보딩 미완료 → 스캔 화면
         router.replace('/(onboarding)/scan');
       }
     }

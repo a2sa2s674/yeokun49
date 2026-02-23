@@ -19,6 +19,7 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeIn, SlideInUp } from 'react-native-reanimated';
 import { useAppStore } from '../../src/store';
 import { getGuardianById } from '../../src/data/guardians';
+import { signOut } from '../../src/services/auth';
 import OhangRadarChart from '../../src/components/OhangRadarChart';
 import { AppColors, Colors } from '../../src/styles/tokens';
 import type { SajuReading } from '../../src/types';
@@ -390,8 +391,12 @@ export default function SettingsScreen() {
   const handleLogout = () => {
     confirmAction(
       '로그아웃',
-      '로그아웃하면 처음 화면으로 돌아갑니다.\n저장된 데이터는 모두 초기화됩니다.',
-      () => { resetStore(); router.replace('/(onboarding)/scan'); },
+      '로그아웃하면 로그인 화면으로 돌아갑니다.',
+      async () => {
+        try { await signOut(); } catch (e) { /* ignore */ }
+        resetStore();
+        router.replace('/(auth)/login');
+      },
     );
   };
 
