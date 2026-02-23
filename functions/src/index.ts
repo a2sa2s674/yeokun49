@@ -140,6 +140,7 @@ function parseGeminiResponse(text: string): SajuReadingResponse {
 
 export const generateSajuReading = functions
   .region('asia-northeast3') // 서울 리전
+  .runWith({ timeoutSeconds: 120, memory: '256MB' })
   .https.onRequest((req, res) => {
     corsHandler(req, res, async () => {
       // POST만 허용
@@ -167,7 +168,7 @@ export const generateSajuReading = functions
 
         // Gemini 호출 (fallback 모델 지원)
         const genAI = new GoogleGenerativeAI(apiKey);
-        const models = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+        const models = ['gemini-2.5-pro', 'gemini-2.5-flash'];
         const prompt = buildSajuPrompt(data);
         let text = '';
 

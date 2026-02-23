@@ -249,12 +249,12 @@ export default function ResultScreen() {
     return () => clearTimeout(timer);
   }, []);
 
-  // AI 풀이 호출 (로딩 애니메이션과 동시 시작)
+  // AI 풀이 호출 (로딩 애니메이션과 동시 시작, 중복 호출 방지)
   useEffect(() => {
     if (aiCalledRef.current) return;
     aiCalledRef.current = true;
 
-    let cancelled = false;
+    const controller = new AbortController();
 
     fetchSajuReading({
       pillars: sajuResult.pillars,
@@ -265,7 +265,7 @@ export default function ResultScreen() {
       name: params.name ?? '',
     })
       .then((reading) => {
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           setAiSections(reading.sections || []);
           setAiSummary(reading.summary || '');
           setAiGeneratedAt(reading.generatedAt || '');
@@ -273,15 +273,16 @@ export default function ResultScreen() {
         }
       })
       .catch((err) => {
-        console.warn('AI saju reading failed:', err);
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
+          console.warn('AI saju reading failed:', err);
           setAiError(true);
           setAiLoading(false);
         }
       });
 
-    return () => { cancelled = true; };
-  }, [sajuResult]);
+    return () => { controller.abort(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // CTA 버튼 애니메이션
   const buttonScale = useSharedValue(1);
