@@ -1,6 +1,6 @@
 # 역운49 프로젝트 현황
 
-> 최종 업데이트: 2026-02-23
+> 최종 업데이트: 2026-02-24
 
 ---
 
@@ -59,7 +59,7 @@
 |------|------|------|------|
 | 생시 입력 (스캔) | `app/(onboarding)/scan.tsx` | ✅ 구현 완료 | 이름, 생년월일, 생시, 성별 입력 → 만세력 계산 |
 | 수호신 선택 | `app/(onboarding)/guardian.tsx` | ✅ 구현 완료 | 5대 수호신 카드 선택 |
-| 결과 확인 | `app/(onboarding)/result.tsx` | ✅ 구현 완료 | 오행 레이더 차트 + AI 사주 풀이 |
+| 결과 확인 | `app/(onboarding)/result.tsx` | ✅ 구현 완료 | 오행 레이더 차트 + AI 사주 풀이 + 재분석 유료 안내 |
 
 ### 메인 탭 (tabs) — 5개 표시 + 2개 히든
 
@@ -69,9 +69,9 @@
 | 📄 퀘스트 | `app/(tabs)/quest.tsx` | ✅ 구현 완료 | 길/흉 게이지, 기본 미션 2개, 특별 미션 1개 (사진 인증) |
 | 👥 조력자 | `app/(tabs)/helpers.tsx` | ❌ 플레이스홀더 | "조력자" 텍스트만 표시 |
 | 🛒 상점 | `app/(tabs)/store.tsx` | ❌ 플레이스홀더 | "인앱 상점" 텍스트만 표시 |
-| ⚙️ 설정 | `app/(tabs)/settings.tsx` | ✅ 구현 완료 | 프로필 헤더, 49일 진행도, 수호신, 오행 차트, 로그아웃 |
+| ⚙️ 설정 | `app/(tabs)/settings.tsx` | ✅ 구현 완료 | 프로필 헤더, 49일 진행도, 수호신, 오행 차트, AI 풀이 재분석 유료 안내, 로그아웃 |
 | 🔮 사주 (히든) | `app/(tabs)/saju.tsx` | ❌ 플레이스홀더 | "사주 정보" 텍스트만 표시 |
-| 💬 채팅 (히든) | `app/(tabs)/chat.tsx` | ❌ 플레이스홀더 | "조력자 채팅" 텍스트만 표시 |
+| 💬 채팅 (히든) | `app/(tabs)/chat.tsx` | ✅ 구현 완료 | AI 수호신 채팅 UI, 무료 3회 제한, 프리미엄 유도 잠금 화면 |
 
 ### 서비스 레이어
 
@@ -82,7 +82,7 @@
 | Firestore 동기화 | `src/services/firestore.ts` | ✅ 코드 완료 | saveUserProfile, loadUserProfile, saveSajuReading |
 | Gemini AI | `src/services/gemini.ts` | ✅ 작동 확인 | 60초 타임아웃, Cloud Function 경유 |
 | 알림 | `src/services/notification.ts` | ❌ 스켈레톤 | FCM 미연동 |
-| 인앱 결제 | `src/services/purchase.ts` | ❌ 스켈레톤 | RevenueCat 미연동 |
+| 인앱 결제 | `src/services/purchase.ts` | ⚠️ SKU + 헬퍼 완료 | RevenueCat SKU 정의, PREMIUM_BENEFITS, POINT_PACKAGES, checkPremiumStatus 구현. API 키 미설정 |
 
 ### Cloud Functions (Firebase)
 
@@ -113,11 +113,23 @@
 
 ---
 
-## Phase 1: 소셜 로그인 완성 (현재 진행 중)
+## Phase 1: 소셜 로그인 완성 + BM Phase 1
 
-> **목표:** Google/카카오 로그인이 실제로 작동하도록 설정 완료
+> **목표:** Google/카카오 로그인 설정 완료 + 무료 체험 제한/프리미엄 전환 유도
 
-### 해야 할 일
+### ✅ 완료된 작업 (BM Phase 1)
+
+| # | 작업 | 파일 | 상태 |
+|---|------|------|------|
+| BM-1 | RevenueCat SKU 재구성 (프리미엄 패스 5,900원/월 + 소모성 + 포인트 패키지) | `src/services/purchase.ts` | ✅ |
+| BM-2 | Zustand에 isPremium, chatUsedCount, sajuReadingCount 상태 추가 | `src/store/useAppStore.ts` | ✅ |
+| BM-3 | 프리미엄 구독자 포인트 1.5배 로직 | `src/store/useAppStore.ts` | ✅ |
+| BM-4 | AI 채팅 무료 3회 제한 + 프리미엄 유도 잠금 화면 | `app/(tabs)/chat.tsx` | ✅ |
+| BM-5 | AI 사주 풀이 무료 1회 제한 + 재분석 유료 안내 | `app/(onboarding)/result.tsx` | ✅ |
+| BM-6 | 마이페이지 AI 풀이 카드 재분석 유료 안내 | `app/(tabs)/settings.tsx` | ✅ |
+| BM-7 | 운명 재스캔 시 유료 AI 풀이 경고 메시지 | `app/(tabs)/settings.tsx` | ✅ |
+
+### 해야 할 일 (소셜 로그인 설정)
 
 | # | 작업 | 위치 | 우선순위 |
 |---|------|------|---------|
@@ -144,7 +156,7 @@
 | 2-1 | 조력자 탭 — 메인 수호신 + 보조 수호신 관리 UI | `app/(tabs)/helpers.tsx` | 🔴 높음 |
 | 2-2 | 상점 탭 — 인앱 상품 목록 + 결제 연동 (RevenueCat) | `app/(tabs)/store.tsx` | 🟡 중간 |
 | 2-3 | 사주 탭 (히든) — 상세 사주 풀이 보기 | `app/(tabs)/saju.tsx` | 🟡 중간 |
-| 2-4 | 채팅 탭 (히든) — AI 수호신 채팅 기능 | `app/(tabs)/chat.tsx` | 🟡 중간 |
+| ~~2-4~~ | ~~채팅 탭 (히든) — AI 수호신 채팅 기능~~ | `app/(tabs)/chat.tsx` | ✅ UI 완료 (Cloud Function 연동 TODO) |
 
 ---
 
@@ -218,7 +230,7 @@ yeokun49/
 │       ├── store.tsx            # 🛒 상점 (플레이스홀더)
 │       ├── settings.tsx         # ⚙️ 설정
 │       ├── saju.tsx             # 🔮 사주 (히든, 플레이스홀더)
-│       └── chat.tsx             # 💬 채팅 (히든, 플레이스홀더)
+│       └── chat.tsx             # 💬 채팅 (무료 3회 제한 + 프리미엄 유도)
 ├── src/
 │   ├── components/
 │   │   └── OhangRadarChart.tsx  # 오행 레이더 차트
@@ -233,7 +245,7 @@ yeokun49/
 │   │   ├── firestore.ts         # Firestore 동기화
 │   │   ├── gemini.ts            # Gemini AI 호출
 │   │   ├── notification.ts      # 푸시 알림 (스켈레톤)
-│   │   └── purchase.ts          # 인앱 결제 (스켈레톤)
+│   │   └── purchase.ts          # 인앱 결제 (SKU + 헬퍼 완료, API 키 미설정)
 │   ├── store/
 │   │   ├── index.ts             # 스토어 export
 │   │   └── useAppStore.ts       # Zustand 글로벌 스토어
@@ -265,9 +277,12 @@ yeokun49/
 | 로그인 UI + 인증 코드 | 90% | ⚠️ API 키 설정 필요 |
 | 대시보드 (로비) | 100% | ✅ 완성 |
 | 퀘스트 탭 | 80% | ⚠️ 데이터가 목 데이터, 동적 생성 미구현 |
+| 채팅 탭 | 90% | ✅ UI + 무료 3회 제한 + 프리미엄 유도 (Cloud Function 연동 TODO) |
 | 조력자 탭 | 5% | ❌ 플레이스홀더 |
 | 상점 탭 | 5% | ❌ 플레이스홀더 |
-| 설정 (마이페이지) | 100% | ✅ 완성 |
-| AI 사주 풀이 | 100% | ✅ Cloud Function + Gemini 작동 |
+| 설정 (마이페이지) | 100% | ✅ 완성 (AI 재분석 유료 안내 포함) |
+| AI 사주 풀이 | 100% | ✅ Cloud Function + Gemini 작동 + 유료 제한 |
+| 인앱 결제 (RevenueCat) | 40% | ⚠️ SKU/헬퍼 완료, API 키 미설정, 스토어 미등록 |
+| BM Phase 1 (무료 제한) | 100% | ✅ 채팅 3회, AI 풀이 1회, 프리미엄 1.5배 포인트 |
 | Firestore 동기화 | 70% | ⚠️ 코드 완료, DB 생성 + 규칙 미설정 |
 | 스토어 출시 준비 | 0% | ❌ 미착수 |
