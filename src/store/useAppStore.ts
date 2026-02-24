@@ -76,6 +76,9 @@ interface AppState {
   chatUsedCount: number;       // AI 채팅 누적 사용 횟수 (무료 3회)
   sajuReadingCount: number;    // AI 사주 풀이 사용 횟수 (무료 1회)
 
+  // ── 친밀도 ──
+  guardianIntimacy: Record<string, number>;  // 수호신별 친밀도 포인트
+
   // ── 액션 ──
   setAuthUser: (userId: string, email: string, provider: 'google' | 'kakao') => void;
   clearAuth: () => void;
@@ -105,6 +108,7 @@ interface AppState {
   setPremium: (isPremium: boolean) => void;
   incrementChatUsed: () => void;
   incrementSajuReadingCount: () => void;
+  incrementIntimacy: (guardianId: string, amount?: number) => void;
   resetStore: () => void;
 }
 
@@ -143,6 +147,7 @@ export const useAppStore = create<AppState>()(
       isPremium: false,
       chatUsedCount: 0,
       sajuReadingCount: 0,
+      guardianIntimacy: {},
 
       // 액션
       setAuthUser: (userId, email, provider) =>
@@ -244,6 +249,14 @@ export const useAppStore = create<AppState>()(
       incrementSajuReadingCount: () =>
         set((state) => ({ sajuReadingCount: state.sajuReadingCount + 1 })),
 
+      incrementIntimacy: (guardianId, amount = 1) =>
+        set((state) => ({
+          guardianIntimacy: {
+            ...state.guardianIntimacy,
+            [guardianId]: (state.guardianIntimacy[guardianId] || 0) + amount,
+          },
+        })),
+
       resetStore: () =>
         set({
           userId: null,
@@ -271,6 +284,7 @@ export const useAppStore = create<AppState>()(
           isPremium: false,
           chatUsedCount: 0,
           sajuReadingCount: 0,
+          guardianIntimacy: {},
         }),
     }),
     {

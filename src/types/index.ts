@@ -49,6 +49,22 @@ export interface ChatMessage {
   role: 'user' | 'guardian';
   content: string;
   timestamp: number;
+  /** 수호신 메시지에 퀘스트 수락 버튼 포함 시 */
+  questAction?: {
+    type: 'quest_accept';
+    questTitle: string;
+    questId: string;
+    accepted: boolean;
+  };
+}
+
+export interface QuickAction {
+  id: string;
+  emoji: string;
+  label: string;
+  action: 'ask_omen' | 'change_quest' | 'get_comfort';
+  /** 친밀도 보너스 포인트 (기본 0) */
+  intimacyBonus?: number;
 }
 
 // ── AI 사주 풀이 ──────────────────────────────────

@@ -29,6 +29,9 @@ export const PRODUCT_IDS = {
   pointsMedium: 'points_1500',              // 1,500P — 4,900원
   pointsLarge: 'points_5000',               // 5,000P — 9,900원
 
+  // 친밀도 (소모성)
+  intimacyBoostPack: 'intimacy_boost_pack',    // 친밀도 부스트팩 — 1,900원 (+50P, 프리미엄 +75P)
+
   // 일회성
   premiumGuardianPack: 'premium_guardian_pack', // 프리미엄 조력자 패키지 — 4,900원
 } as const;
@@ -51,6 +54,42 @@ export const POINT_PACKAGES = [
   { id: PRODUCT_IDS.pointsMedium, points: 1500,  price: 4900, label: '1,500P' },
   { id: PRODUCT_IDS.pointsLarge,  points: 5000,  price: 9900, label: '5,000P', bonus: '최대 가성비' },
 ] as const;
+
+// ── 친밀도 레벨 체계 ────────────────────────────────
+
+export const INTIMACY_LEVELS = [
+  { level: 1,  required: 0,   benefit: '기본 대화',              premium: false },
+  { level: 2,  required: 10,  benefit: '전용 인사말',            premium: false },
+  { level: 3,  required: 30,  benefit: '퀘스트 추천 향상',       premium: false },
+  { level: 4,  required: 60,  benefit: '전용 이모지',            premium: false },
+  { level: 5,  required: 100, benefit: '주간 운세 DM',           premium: true },
+  { level: 6,  required: 150, benefit: '수호신 코스튬',          premium: true },
+  { level: 7,  required: 210, benefit: '특별 퀘스트',            premium: true },
+  { level: 8,  required: 280, benefit: '심층 AI 풀이 무제한',    premium: true },
+  { level: 9,  required: 360, benefit: '수호신 스킬 강화',       premium: true },
+  { level: 10, required: 450, benefit: '전설 칭호 + 특별 효과',  premium: true },
+] as const;
+
+/** 친밀도 포인트 → 레벨 계산 */
+export function getIntimacyLevel(points: number): number {
+  for (let i = INTIMACY_LEVELS.length - 1; i >= 0; i--) {
+    if (points >= INTIMACY_LEVELS[i].required) return INTIMACY_LEVELS[i].level;
+  }
+  return 1;
+}
+
+/** 다음 레벨까지 남은 포인트 */
+export function getIntimacyProgress(points: number): { current: number; next: number; progress: number } {
+  const level = getIntimacyLevel(points);
+  if (level >= 10) return { current: points, next: 450, progress: 1 };
+  const currentReq = INTIMACY_LEVELS[level - 1].required;
+  const nextReq = INTIMACY_LEVELS[level].required;
+  return {
+    current: points - currentReq,
+    next: nextReq - currentReq,
+    progress: (points - currentReq) / (nextReq - currentReq),
+  };
+}
 
 // ── RevenueCat 초기화 ──────────────────────────────
 
