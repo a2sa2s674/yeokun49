@@ -156,29 +156,27 @@ export default function LoginScreen() {
           )}
         </Pressable>
 
-        {/* 개발자 테스트 인증 (DEV 전용) */}
-        {__DEV__ !== false && (
-          <Pressable
-            style={[styles.socialBtn, styles.devBtn]}
-            onPress={() => {
-              const testUid = 'dev-test-user-001';
-              const testEmail = 'dev@yeokun49.test';
-              useAppStore.getState().setAuthUser(testUid, testEmail, 'google');
+        {/* 개발자 테스트 인증 — TODO: 출시 전 제거 */}
+        <Pressable
+          style={[styles.socialBtn, styles.devBtn]}
+          onPress={() => {
+            const testUid = 'dev-test-user-001';
+            const testEmail = 'dev@yeokun49.test';
+            useAppStore.getState().setAuthUser(testUid, testEmail, 'google');
 
-              if (useAppStore.getState().onboardingComplete && useAppStore.getState().guardianId) {
-                router.replace('/(tabs)/dashboard');
-              } else {
-                router.replace('/(onboarding)/scan');
-              }
-            }}
-            disabled={loading !== null}
-          >
-            <View style={styles.devIconWrap}>
-              <Ionicons name="bug" size={18} color="#FFF" />
-            </View>
-            <Text style={styles.devBtnText}>테스트 인증 (개발용)</Text>
-          </Pressable>
-        )}
+            if (useAppStore.getState().onboardingComplete && useAppStore.getState().guardianId) {
+              router.replace('/(tabs)/dashboard');
+            } else {
+              router.replace('/(onboarding)/scan');
+            }
+          }}
+          disabled={loading !== null}
+        >
+          <View style={styles.devIconWrap}>
+            <Ionicons name="bug" size={18} color="#FFF" />
+          </View>
+          <Text style={styles.devBtnText}>테스트 인증 (개발용)</Text>
+        </Pressable>
 
         {/* 에러 메시지 */}
         {error ? (
