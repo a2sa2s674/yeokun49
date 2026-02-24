@@ -29,6 +29,7 @@ import { calculateOhang, getOhangInterpretation } from '../../src/lib/saju';
 import { fetchSajuReading } from '../../src/services/gemini';
 import { Colors } from '../../src/styles/tokens';
 import { useAppStore } from '../../src/store';
+import { PRODUCT_IDS } from '../../src/services/purchase';
 import type { OhangKey, SajuReadingSection } from '../../src/types';
 
 const { width } = Dimensions.get('window');
@@ -249,10 +250,23 @@ export default function ResultScreen() {
     return () => clearTimeout(timer);
   }, []);
 
+  // AI 풀이 유료 여부 확인
+  const { isPremium, sajuReadingCount } = useAppStore();
+  const hasUsedFreeReading = sajuReadingCount >= 1;
+  const canUseAiFree = !hasUsedFreeReading || isPremium;
+  const [showPaidNotice, setShowPaidNotice] = useState(false);
+
   // AI 풀이 호출 (로딩 애니메이션과 동시 시작, 중복 호출 방지)
   useEffect(() => {
     if (aiCalledRef.current) return;
     aiCalledRef.current = true;
+
+    // 무료 1회 이미 사용 + 프리미엄 아닌 경우 → AI 호출 스킵, 유료 안내
+    if (!canUseAiFree) {
+      setShowPaidNotice(true);
+      setAiLoading(false);
+      return;
+    }
 
     const controller = new AbortController();
 
@@ -270,6 +284,8 @@ export default function ResultScreen() {
           setAiSummary(reading.summary || '');
           setAiGeneratedAt(reading.generatedAt || '');
           setAiLoading(false);
+          // AI 풀이 사용 횟수 증가
+          useAppStore.getState().incrementSajuReadingCount();
         }
       })
       .catch((err) => {
@@ -383,7 +399,7 @@ export default function ResultScreen() {
         </Animated.View>
 
         {/* ── AI 심층 사주 풀이 ── */}
-        {!aiError && (
+        {!aiError && !showPaidNotice && (
           <Animated.View entering={FadeIn.delay(1500).duration(600)}>
             <View style={styles.aiSectionHeader}>
               <View style={styles.aiTitleRow}>
@@ -412,6 +428,33 @@ export default function ResultScreen() {
                 </Animated.View>
               ))
             )}
+          </Animated.View>
+        )}
+
+        {/* ── AI 풀이 유료 안내 (무료 1회 소진) ── */}
+        {showPaidNotice && (
+          <Animated.View entering={FadeIn.delay(1500).duration(600)}>
+            <View style={styles.paidNoticeWrap}>
+              <Text style={styles.paidNoticeEmoji}>💎</Text>
+              <Text style={styles.paidNoticeTitle}>AI 심층 풀이 잠김</Text>
+              <Text style={styles.paidNoticeDesc}>
+                무료 AI 풀이 1회를 이미 사용하셨습니다.{'\n'}
+                재분석을 원하시면 아래 옵션을 이용해주세요.
+              </Text>
+              <View style={styles.paidOptionList}>
+                <View style={styles.paidOptionRow}>
+                  <Text style={styles.paidOptionIcon}>✨</Text>
+                  <Text style={styles.paidOptionText}>프리미엄 패스 — 월 5,900원 (무제한)</Text>
+                </View>
+                <View style={styles.paidOptionRow}>
+                  <Text style={styles.paidOptionIcon}>🎟️</Text>
+                  <Text style={styles.paidOptionText}>추가 AI 풀이권 — 1,900원 (1회)</Text>
+                </View>
+              </View>
+              <Pressable style={styles.paidNoticeBtn}>
+                <Text style={styles.paidNoticeBtnText}>프리미엄 패스 시작하기</Text>
+              </Pressable>
+            </View>
           </Animated.View>
         )}
 
@@ -533,6 +576,76 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 12,
     color: '#9CA3AF',
+  },
+
+  // ── AI 풀이 유료 안내 ──
+  paidNoticeWrap: {
+    alignItems: 'center',
+    marginHorizontal: 24,
+    marginBottom: 20,
+    backgroundColor: CARD_BG,
+    borderRadius: 14,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: { elevation: 3 },
+      web: { boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
+    }),
+  },
+  paidNoticeEmoji: {
+    fontSize: 40,
+    marginBottom: 12,
+  },
+  paidNoticeTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: TEXT_DARK,
+    marginBottom: 8,
+  },
+  paidNoticeDesc: {
+    fontSize: 13,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  paidOptionList: {
+    width: '100%',
+    gap: 8,
+    marginBottom: 16,
+  },
+  paidOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 8,
+  },
+  paidOptionIcon: {
+    fontSize: 16,
+  },
+  paidOptionText: {
+    fontSize: 13,
+    color: TEXT_DARK,
+    fontWeight: '500',
+  },
+  paidNoticeBtn: {
+    width: '100%',
+    backgroundColor: PURPLE_MAIN,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  paidNoticeBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFF',
   },
 
   // ── CTA ──

@@ -22,6 +22,7 @@ import { getGuardianById } from '../../src/data/guardians';
 import { signOut } from '../../src/services/auth';
 import OhangRadarChart from '../../src/components/OhangRadarChart';
 import { AppColors, Colors } from '../../src/styles/tokens';
+import { PRODUCT_IDS } from '../../src/services/purchase';
 import type { SajuReading } from '../../src/types';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -222,8 +223,17 @@ function GuardianInfoCard({
 // ═══════════════════════════════════════════════════
 // AI 사주 풀이 카드
 // ═══════════════════════════════════════════════════
-function AiInterpretationCard({ reading }: { reading: SajuReading }) {
+function AiInterpretationCard({
+  reading,
+  isPremium,
+  sajuReadingCount,
+}: {
+  reading: SajuReading;
+  isPremium: boolean;
+  sajuReadingCount: number;
+}) {
   const [expanded, setExpanded] = useState(false);
+  const hasUsedFreeReading = sajuReadingCount >= 1;
 
   return (
     <Animated.View entering={SlideInUp.delay(250).duration(500)} style={styles.card}>
@@ -258,6 +268,30 @@ function AiInterpretationCard({ reading }: { reading: SajuReading }) {
             {reading.summary || '터치하여 상세 풀이 보기'}
           </Text>
           <Text style={styles.aiExpandHint}>터치하여 전체 보기</Text>
+        </View>
+      )}
+
+      {/* 재분석 유료 안내 */}
+      {hasUsedFreeReading && !isPremium && (
+        <View style={styles.reanalysisNotice}>
+          <View style={styles.divider} />
+          <View style={styles.reanalysisRow}>
+            <Text style={styles.reanalysisIcon}>💎</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.reanalysisTitle}>재분석은 유료입니다</Text>
+              <Text style={styles.reanalysisDesc}>
+                프리미엄 패스 구독 시 무제한 재분석 가능, 또는 추가 AI 풀이권(1,900원)을 이용하세요.
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
+      {isPremium && (
+        <View style={styles.premiumReanalysis}>
+          <View style={styles.divider} />
+          <Pressable style={styles.reanalysisBtn}>
+            <Text style={styles.reanalysisBtnText}>✨ AI 재분석하기 (프리미엄)</Text>
+          </Pressable>
         </View>
       )}
     </Animated.View>
@@ -355,6 +389,8 @@ export default function SettingsScreen() {
     points,
     subGuardians,
     sajuReading,
+    isPremium,
+    sajuReadingCount,
     resetStore,
   } = useAppStore();
 
@@ -373,9 +409,14 @@ export default function SettingsScreen() {
   };
 
   const handleRescan = () => {
+    const hasUsedFreeReading = sajuReadingCount >= 1;
+    const rescanMessage = hasUsedFreeReading && !isPremium
+      ? '처음부터 다시 시작하시겠습니까?\n모든 진행 데이터가 초기화됩니다.\n\n⚠️ 재분석 시 AI 풀이에는 추가 AI 풀이권(1,900원)이 필요합니다.\n프리미엄 패스 구독 시 무제한 이용 가능합니다.'
+      : '처음부터 다시 시작하시겠습니까?\n모든 진행 데이터가 초기화됩니다.';
+
     confirmAction(
       '운명 재스캔',
-      '처음부터 다시 시작하시겠습니까?\n모든 진행 데이터가 초기화됩니다.',
+      rescanMessage,
       () => { resetStore(); router.replace('/(onboarding)/scan'); },
     );
   };
@@ -416,7 +457,13 @@ export default function SettingsScreen() {
           strongestElement={strongestElement}
           weakestElement={weakestElement}
         />
-        {sajuReading && <AiInterpretationCard reading={sajuReading} />}
+        {sajuReading && (
+          <AiInterpretationCard
+            reading={sajuReading}
+            isPremium={isPremium}
+            sajuReadingCount={sajuReadingCount}
+          />
+        )}
         <ProgressCard dayIndex={dayIndex} questStartDate={questStartDate} />
         <GuardianInfoCard guardianId={guardianId} subGuardians={subGuardians} />
         <SettingsMenu onRescan={handleRescan} onReset={handleReset} onLogout={handleLogout} />
@@ -557,5 +604,44 @@ const styles = StyleSheet.create({
   },
   aiGeneratedAt: {
     fontSize: 11, color: AppColors.textMuted, textAlign: 'right', marginTop: 4,
+  },
+
+  // ── AI 재분석 유료 안내 ──
+  reanalysisNotice: {
+    marginTop: 4,
+  },
+  reanalysisRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  reanalysisIcon: {
+    fontSize: 20,
+    marginTop: 2,
+  },
+  reanalysisTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: AppColors.purpleMain,
+    marginBottom: 2,
+  },
+  reanalysisDesc: {
+    fontSize: 12,
+    color: AppColors.textMuted,
+    lineHeight: 18,
+  },
+  premiumReanalysis: {
+    marginTop: 4,
+  },
+  reanalysisBtn: {
+    backgroundColor: AppColors.purpleMain,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  reanalysisBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFF',
   },
 });

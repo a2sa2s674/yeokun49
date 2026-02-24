@@ -69,6 +69,13 @@ interface AppState {
   sajuReading: SajuReading | null;
   sajuReadingLoading: boolean;
 
+  // ── 프리미엄 구독 ──
+  isPremium: boolean;
+
+  // ── 사용량 제한 ──
+  chatUsedCount: number;       // AI 채팅 누적 사용 횟수 (무료 3회)
+  sajuReadingCount: number;    // AI 사주 풀이 사용 횟수 (무료 1회)
+
   // ── 액션 ──
   setAuthUser: (userId: string, email: string, provider: 'google' | 'kakao') => void;
   clearAuth: () => void;
@@ -95,6 +102,9 @@ interface AppState {
   setQuestPhoto: (questId: string, photoUri: string) => void;
   setSajuReading: (reading: SajuReading) => void;
   setSajuReadingLoading: (loading: boolean) => void;
+  setPremium: (isPremium: boolean) => void;
+  incrementChatUsed: () => void;
+  incrementSajuReadingCount: () => void;
   resetStore: () => void;
 }
 
@@ -130,6 +140,9 @@ export const useAppStore = create<AppState>()(
       onboardingComplete: false,
       sajuReading: null,
       sajuReadingLoading: false,
+      isPremium: false,
+      chatUsedCount: 0,
+      sajuReadingCount: 0,
 
       // 액션
       setAuthUser: (userId, email, provider) =>
@@ -172,7 +185,11 @@ export const useAppStore = create<AppState>()(
       completeQuest: (questId) =>
         set((state) => {
           const quest = state.todayQuests.find((q) => q.id === questId);
-          const pointsToAdd = quest && !quest.completed ? quest.point : 0;
+          const basePoints = quest && !quest.completed ? quest.point : 0;
+          // 프리미엄 구독자는 포인트 1.5배
+          const pointsToAdd = state.isPremium
+            ? Math.round(basePoints * 1.5)
+            : basePoints;
           const gaugeBoost = quest && !quest.completed ? (quest.isSpecial ? 8 : 4) : 0;
           return {
             todayQuests: state.todayQuests.map((q) =>
@@ -218,6 +235,15 @@ export const useAppStore = create<AppState>()(
       setSajuReadingLoading: (loading) =>
         set({ sajuReadingLoading: loading }),
 
+      setPremium: (isPremium) =>
+        set({ isPremium }),
+
+      incrementChatUsed: () =>
+        set((state) => ({ chatUsedCount: state.chatUsedCount + 1 })),
+
+      incrementSajuReadingCount: () =>
+        set((state) => ({ sajuReadingCount: state.sajuReadingCount + 1 })),
+
       resetStore: () =>
         set({
           userId: null,
@@ -242,6 +268,9 @@ export const useAppStore = create<AppState>()(
           onboardingComplete: false,
           sajuReading: null,
           sajuReadingLoading: false,
+          isPremium: false,
+          chatUsedCount: 0,
+          sajuReadingCount: 0,
         }),
     }),
     {
