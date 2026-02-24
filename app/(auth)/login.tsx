@@ -156,6 +156,30 @@ export default function LoginScreen() {
           )}
         </Pressable>
 
+        {/* 개발자 테스트 인증 (DEV 전용) */}
+        {__DEV__ !== false && (
+          <Pressable
+            style={[styles.socialBtn, styles.devBtn]}
+            onPress={() => {
+              const testUid = 'dev-test-user-001';
+              const testEmail = 'dev@yeokun49.test';
+              useAppStore.getState().setAuthUser(testUid, testEmail, 'google');
+
+              if (useAppStore.getState().onboardingComplete && useAppStore.getState().guardianId) {
+                router.replace('/(tabs)/dashboard');
+              } else {
+                router.replace('/(onboarding)/scan');
+              }
+            }}
+            disabled={loading !== null}
+          >
+            <View style={styles.devIconWrap}>
+              <Ionicons name="bug" size={18} color="#FFF" />
+            </View>
+            <Text style={styles.devBtnText}>테스트 인증 (개발용)</Text>
+          </Pressable>
+        )}
+
         {/* 에러 메시지 */}
         {error ? (
           <Animated.View entering={FadeIn.duration(300)}>
@@ -271,6 +295,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#3C1E1E',
+  },
+
+  // 개발자 테스트 버튼
+  devBtn: {
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderStyle: 'dashed',
+  },
+  devIconWrap: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  devBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#94A3B8',
   },
 
   // 에러
