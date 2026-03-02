@@ -476,8 +476,8 @@ export default function ChatScreen() {
     }
 
     // 오늘의 운세: 실제 AI API 호출
-    if (actionType === 'today_fortune' && userId) {
-      getOrFetchDailyFortune(userId)
+    if (actionType === 'today_fortune') {
+      getOrFetchDailyFortune(userId ?? 'anonymous')
         .then((fortune) => {
           const content = fortune?.shortFortune
             ?? getPlaceholderResponse(guardianName, actionType);

@@ -69,8 +69,9 @@ export async function getOrFetchDailyFortune(uid: string): Promise<DailyFortune 
   store.setDailyFortuneLoading(true);
 
   try {
-    // 2) Firestore 캐시 확인
-    if (uid) {
+    // 2) Firestore 캐시 확인 (로그인 사용자만)
+    const hasRealUid = uid && uid !== 'anonymous';
+    if (hasRealUid) {
       const cacheRef = doc(db, 'users', uid, 'daily_fortunes', todayDate);
       const snapshot = await getDoc(cacheRef);
       if (snapshot.exists()) {
@@ -119,7 +120,7 @@ export async function getOrFetchDailyFortune(uid: string): Promise<DailyFortune 
       store.setDailyFortune(fortune);
 
       // Firestore 클라이언트 캐시도 저장 (비동기, 실패 무시)
-      if (uid) {
+      if (hasRealUid) {
         const cacheRef = doc(db, 'users', uid, 'daily_fortunes', todayDate);
         setDoc(cacheRef, fortune).catch((err) =>
           console.warn('Failed to cache daily fortune locally:', err)
