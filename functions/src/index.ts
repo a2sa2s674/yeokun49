@@ -1,12 +1,15 @@
 /**
  * Firebase Cloud Functions for yeokun49
  * 1) generateSajuReading — Gemini AI 사주 풀이
- * 2) verifyKakaoToken — 카카오 로그인 → Firebase Custom Token
+ * 2) getWeeklyReport — 주간 AI 운세 리포트
+ * 3) getTodayFortune — 오늘의 운세 (짧은 + 심층 해설, Firestore 캐싱)
+ * 4) verifyKakaoToken — 카카오 로그인 → Firebase Custom Token
  */
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import cors from 'cors';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { buildShortFortunePrompt, buildDeepFortunePrompt, type FortunePromptParams } from './aiPrompts';
 
 // Firebase Admin 초기화
 admin.initializeApp();
@@ -357,6 +360,138 @@ export const getWeeklyReport = functions
         console.error('getWeeklyReport error:', error?.message || error);
         res.status(500).json({
           error: 'Failed to generate weekly report',
+          message: error?.message || 'Unknown error',
+        });
+      }
+    });
+  });
+
+// ═══════════════════════════════════════════════════════════
+// 오늘의 운세 — 짧은 운세 + 심층 해설 (Firestore 캐싱)
+// ═══════════════════════════════════════════════════════════
+
+interface TodayFortuneRequest {
+  userId: string;
+  userName: string;
+  guardianName: string;
+  guardianPersonality: string;
+  mainElement: string;
+  lackingElement: string;
+  todayDate: string;       // 'YYYY-MM-DD'
+  todayElement: string;    // 오행
+  todayFeature: string;    // 흉살/특징
+}
+
+interface TodayFortuneResponse {
+  shortFortune: string;
+  deepFortune: string;
+  todayDate: string;
+  generatedAt: string;
+}
+
+export const getTodayFortune = functions
+  .region('asia-northeast3')
+  .runWith({ timeoutSeconds: 120, memory: '256MB' })
+  .https.onRequest((req, res) => {
+    corsHandler(req, res, async () => {
+      if (req.method !== 'POST') {
+        res.status(405).json({ error: 'Method not allowed' });
+        return;
+      }
+
+      try {
+        const data = req.body as TodayFortuneRequest;
+
+        if (!data.userId || !data.todayDate || !data.guardianName || !data.mainElement) {
+          res.status(400).json({
+            error: 'Missing required fields: userId, todayDate, guardianName, mainElement',
+          });
+          return;
+        }
+
+        // ── 1) Firestore 캐시 확인 ──
+        const cacheRef = admin
+          .firestore()
+          .collection('users')
+          .doc(data.userId)
+          .collection('daily_fortunes')
+          .doc(data.todayDate);
+
+        const cached = await cacheRef.get();
+        if (cached.exists) {
+          console.log(`[TodayFortune] Cache hit for ${data.userId}/${data.todayDate}`);
+          res.status(200).json(cached.data() as TodayFortuneResponse);
+          return;
+        }
+
+        // ── 2) 캐시 미스 → Gemini AI 호출 ──
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
+          console.error('GEMINI_API_KEY not set.');
+          res.status(500).json({ error: 'AI service not configured' });
+          return;
+        }
+
+        const promptParams: FortunePromptParams = {
+          helperName: data.guardianName,
+          userName: data.userName,
+          mainElement: data.mainElement,
+          lackingElement: data.lackingElement,
+          todayDate: data.todayDate,
+          todayElement: data.todayElement,
+          todayFeature: data.todayFeature,
+        };
+
+        const shortPrompt = buildShortFortunePrompt(promptParams);
+        const deepPrompt = buildDeepFortunePrompt(promptParams);
+
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const models = ['gemini-2.5-flash', 'gemini-2.5-pro'];
+
+        // 두 프롬프트 병렬 호출
+        async function callGemini(prompt: string): Promise<string> {
+          for (const modelName of models) {
+            try {
+              console.log(`[TodayFortune] Calling ${modelName}...`);
+              const model = genAI.getGenerativeModel({
+                model: modelName,
+                generationConfig: {
+                  temperature: 0.8,
+                  topP: 0.9,
+                  maxOutputTokens: 2048,
+                },
+              });
+              const result = await model.generateContent(prompt);
+              return result.response.text();
+            } catch (err: any) {
+              console.warn(`[TodayFortune] ${modelName} failed:`, err?.message);
+              if (modelName === models[models.length - 1]) throw err;
+            }
+          }
+          throw new Error('All models failed');
+        }
+
+        const [shortText, deepText] = await Promise.all([
+          callGemini(shortPrompt),
+          callGemini(deepPrompt),
+        ]);
+
+        const response: TodayFortuneResponse = {
+          shortFortune: shortText.trim(),
+          deepFortune: deepText.trim(),
+          todayDate: data.todayDate,
+          generatedAt: new Date().toISOString(),
+        };
+
+        // ── 3) Firestore에 캐시 저장 ──
+        await cacheRef.set(response);
+        console.log(`[TodayFortune] Cached for ${data.userId}/${data.todayDate}`);
+
+        res.status(200).json(response);
+      } catch (error: any) {
+        console.error('getTodayFortune error:', error?.message || error);
+        res.status(500).json({
+          error: 'Failed to generate today fortune',
           message: error?.message || 'Unknown error',
         });
       }

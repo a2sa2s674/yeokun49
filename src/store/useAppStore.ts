@@ -4,7 +4,7 @@
  */
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { OhangStats, OhangKey, Quest, SajuReading, WeeklyReport } from '../types';
+import type { OhangStats, OhangKey, Quest, SajuReading, WeeklyReport, DailyFortune } from '../types';
 
 // ── 타입 정의 ────────────────────────────────────
 
@@ -84,6 +84,10 @@ interface AppState {
   lastWeeklyReportSeen: string | null;  // 마지막으로 본 weekKey
   weeklyReportLoading: boolean;
 
+  // ── 오늘의 운세 ──
+  dailyFortune: DailyFortune | null;
+  dailyFortuneLoading: boolean;
+
   // ── 액션 ──
   setAuthUser: (userId: string, email: string, provider: 'google' | 'kakao') => void;
   clearAuth: () => void;
@@ -117,6 +121,8 @@ interface AppState {
   setWeeklyReport: (report: WeeklyReport) => void;
   setLastWeeklyReportSeen: (weekKey: string) => void;
   setWeeklyReportLoading: (loading: boolean) => void;
+  setDailyFortune: (fortune: DailyFortune) => void;
+  setDailyFortuneLoading: (loading: boolean) => void;
   resetStore: () => void;
 }
 
@@ -159,6 +165,8 @@ export const useAppStore = create<AppState>()(
       weeklyReport: null,
       lastWeeklyReportSeen: null,
       weeklyReportLoading: false,
+      dailyFortune: null,
+      dailyFortuneLoading: false,
 
       // 액션
       setAuthUser: (userId, email, provider) =>
@@ -277,6 +285,12 @@ export const useAppStore = create<AppState>()(
       setWeeklyReportLoading: (loading) =>
         set({ weeklyReportLoading: loading }),
 
+      setDailyFortune: (fortune) =>
+        set({ dailyFortune: fortune, dailyFortuneLoading: false }),
+
+      setDailyFortuneLoading: (loading) =>
+        set({ dailyFortuneLoading: loading }),
+
       resetStore: () =>
         set({
           userId: null,
@@ -308,6 +322,8 @@ export const useAppStore = create<AppState>()(
           weeklyReport: null,
           lastWeeklyReportSeen: null,
           weeklyReportLoading: false,
+          dailyFortune: null,
+          dailyFortuneLoading: false,
         }),
     }),
     {

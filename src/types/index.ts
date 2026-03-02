@@ -89,6 +89,15 @@ export interface WeeklyReport {
   guardianId: string;
 }
 
+// ── 오늘의 운세 (일일 포춘) ────────────────────────
+
+export interface DailyFortune {
+  shortFortune: string;    // 짧은 채팅용 운세 (150~200자)
+  deepFortune: string;     // 심층 해설 마크다운
+  todayDate: string;       // 'YYYY-MM-DD'
+  generatedAt: string;     // ISO timestamp
+}
+
 // ── AI 사주 풀이 ──────────────────────────────────
 
 export interface SajuReadingSection {

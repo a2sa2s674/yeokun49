@@ -37,7 +37,9 @@ import { useAppStore } from '../../src/store';
 import { getGuardianById, type GuardianData } from '../../src/data/guardians';
 import { getIntimacyLevel } from '../../src/services/purchase';
 import { getOrFetchWeeklyReport, getISOWeekKey } from '../../src/services/weeklyReport';
+import { getOrFetchDailyFortune } from '../../src/services/dailyFortune';
 import WeeklyReportBubble from '../../src/components/WeeklyReportBubble';
+import DeepFortuneModal from '../../src/components/DeepFortuneModal';
 import { AppColors } from '../../src/styles/tokens';
 import type { ChatMessage, QuickAction } from '../../src/types';
 
@@ -243,11 +245,15 @@ function GuardianBubble({
   guardianEmoji,
   theme,
   onQuestAccept,
+  isFortuneBubble,
+  onDeepFortune,
 }: {
   message: ChatMessage;
   guardianEmoji: string;
   theme: GuardianData['theme'];
   onQuestAccept?: (questId: string) => void;
+  isFortuneBubble?: boolean;
+  onDeepFortune?: () => void;
 }) {
   return (
     <Animated.View entering={FadeIn.duration(400)} style={styles.guardianRow}>
@@ -260,6 +266,22 @@ function GuardianBubble({
         {/* 말풍선 */}
         <View style={[styles.guardianBubble, { borderColor: theme.primary + '60' }]}>
           <Text style={styles.guardianText}>{message.content}</Text>
+
+          {/* 오늘의 운세: "더 자세히 알아보기" 버튼 */}
+          {isFortuneBubble && onDeepFortune && (
+            <Animated.View entering={FadeIn.delay(200).duration(400)}>
+              <Pressable onPress={onDeepFortune} style={styles.questBtnWrap}>
+                <LinearGradient
+                  colors={[theme.primary, theme.primary + 'CC']}
+                  style={styles.questBtn}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Text style={styles.questBtnText}>🔮 더 자세히 알아보기</Text>
+                </LinearGradient>
+              </Pressable>
+            </Animated.View>
+          )}
 
           {/* 퀘스트 수락 버튼 */}
           {message.questAction && !message.questAction.accepted && (
@@ -403,6 +425,9 @@ export default function ChatScreen() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [lastAction, setLastAction] = useState<string | undefined>(undefined);
+  const [deepModalVisible, setDeepModalVisible] = useState(false);
+  const [deepFortuneText, setDeepFortuneText] = useState<string | null>(null);
+  const [deepFortuneLoading, setDeepFortuneLoading] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   const remainingFree = Math.max(0, FREE_CHAT_LIMIT - chatUsedCount);
@@ -434,7 +459,42 @@ export default function ChatScreen() {
       incrementIntimacy(guardianId, 1 + (intimacyBonus ?? 0));
     }
 
-    // TODO: 실제 AI 채팅 Cloud Function 연동
+    // 오늘의 운세: 실제 AI API 호출
+    if (actionType === 'today_fortune' && userId) {
+      getOrFetchDailyFortune(userId)
+        .then((fortune) => {
+          const content = fortune?.shortFortune
+            ?? getPlaceholderResponse(guardianName, actionType);
+          // 심층 해설 텍스트 저장
+          if (fortune?.deepFortune) {
+            setDeepFortuneText(fortune.deepFortune);
+          }
+          const guardianMsg: ChatMessage = {
+            id: `fortune-${Date.now()}`,
+            role: 'guardian',
+            content,
+            timestamp: Date.now(),
+          };
+          setMessages((prev) => [...prev, guardianMsg]);
+          setLoading(false);
+          setLastAction(undefined);
+        })
+        .catch(() => {
+          // 실패 시 플레이스홀더 사용
+          const guardianMsg: ChatMessage = {
+            id: `fortune-${Date.now()}`,
+            role: 'guardian',
+            content: getPlaceholderResponse(guardianName, actionType),
+            timestamp: Date.now(),
+          };
+          setMessages((prev) => [...prev, guardianMsg]);
+          setLoading(false);
+          setLastAction(undefined);
+        });
+      return;
+    }
+
+    // 기타 액션: 플레이스홀더 응답 (TODO: 추후 AI 채팅 Cloud Function 연동)
     setTimeout(() => {
       const shouldAddQuest = actionType === 'change_quest' || (actionType === 'ask_omen' && Math.random() > 0.5);
       const guardianMsg: ChatMessage = {
@@ -455,7 +515,7 @@ export default function ChatScreen() {
       setLoading(false);
       setLastAction(undefined);
     }, 1500);
-  }, [input, loading, isLocked, isPremium, guardianId, guardianName]);
+  }, [input, loading, isLocked, isPremium, guardianId, guardianName, userId]);
 
   // ── 빠른 액션 칩 핸들러 ──
   const handleQuickAction = useCallback((action: QuickAction) => {
@@ -664,12 +724,15 @@ export default function ChatScreen() {
                 />
               );
             }
+            const isFortune = item.role === 'guardian' && item.id.startsWith('fortune-');
             return item.role === 'guardian' ? (
               <GuardianBubble
                 message={item}
                 guardianEmoji={guardianEmoji}
                 theme={theme}
                 onQuestAccept={handleQuestAccept}
+                isFortuneBubble={isFortune}
+                onDeepFortune={isFortune ? () => setDeepModalVisible(true) : undefined}
               />
             ) : (
               <UserBubble message={item} />
@@ -718,6 +781,16 @@ export default function ChatScreen() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+
+      {/* 심층 해설 모달 */}
+      <DeepFortuneModal
+        visible={deepModalVisible}
+        onClose={() => setDeepModalVisible(false)}
+        deepFortune={deepFortuneText}
+        loading={deepFortuneLoading}
+        guardianName={guardianName}
+        themeColor={theme.primary}
+      />
     </SafeAreaView>
   );
 }
