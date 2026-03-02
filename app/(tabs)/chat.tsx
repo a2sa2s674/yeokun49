@@ -37,6 +37,8 @@ import Animated, {
 import { useAppStore } from '../../src/store';
 import { getGuardianById, type GuardianData } from '../../src/data/guardians';
 import { getIntimacyLevel } from '../../src/services/purchase';
+import { getOrFetchWeeklyReport, getISOWeekKey } from '../../src/services/weeklyReport';
+import WeeklyReportBubble from '../../src/components/WeeklyReportBubble';
 import { AppColors } from '../../src/styles/tokens';
 import type { ChatMessage, QuickAction } from '../../src/types';
 
@@ -356,6 +358,11 @@ export default function ChatScreen() {
     incrementChatUsed,
     guardianIntimacy,
     incrementIntimacy,
+    userId,
+    weeklyReport,
+    lastWeeklyReportSeen,
+    weeklyReportLoading,
+    setLastWeeklyReportSeen,
   } = useAppStore();
 
   const guardian = guardianId ? getGuardianById(guardianId) : null;
@@ -472,6 +479,56 @@ export default function ChatScreen() {
     }, 500);
   }, [guardianId, guardianName]);
 
+  // ── 주간 리포트 자동 로딩 ──
+  const weeklyReportLoadedRef = useRef(false);
+  useEffect(() => {
+    if (weeklyReportLoadedRef.current) return;
+    weeklyReportLoadedRef.current = true;
+
+    const currentWeekKey = getISOWeekKey(new Date());
+    // 이미 이번 주 리포트를 본 적 있으면 스킵
+    if (lastWeeklyReportSeen === currentWeekKey && weeklyReport?.weekKey === currentWeekKey) {
+      // 이미 본 리포트지만 메시지에는 삽입 (재방문 시에도 보이게)
+      setMessages((prev) => {
+        if (prev.some((m) => m.id?.startsWith('weekly-report-'))) return prev;
+        const reportMsg: ChatMessage = {
+          id: `weekly-report-${currentWeekKey}`,
+          role: 'guardian',
+          content: weeklyReport!.greeting,
+          timestamp: new Date(weeklyReport!.generatedAt).getTime(),
+          weeklyReport: weeklyReport!,
+        };
+        // welcome 메시지 다음에 삽입
+        const welcomeIdx = prev.findIndex((m) => m.id === 'welcome');
+        const newMsgs = [...prev];
+        newMsgs.splice(welcomeIdx + 1, 0, reportMsg);
+        return newMsgs;
+      });
+      return;
+    }
+
+    // 리포트 가져오기
+    const uid = userId || '';
+    getOrFetchWeeklyReport(uid).then((report) => {
+      if (!report) return;
+      setMessages((prev) => {
+        if (prev.some((m) => m.id?.startsWith('weekly-report-'))) return prev;
+        const reportMsg: ChatMessage = {
+          id: `weekly-report-${report.weekKey}`,
+          role: 'guardian',
+          content: report.greeting,
+          timestamp: new Date(report.generatedAt).getTime(),
+          weeklyReport: report,
+        };
+        const welcomeIdx = prev.findIndex((m) => m.id === 'welcome');
+        const newMsgs = [...prev];
+        newMsgs.splice(welcomeIdx + 1, 0, reportMsg);
+        return newMsgs;
+      });
+      setLastWeeklyReportSeen(report.weekKey);
+    });
+  }, []);
+
   // 메시지 추가 시 스크롤
   useEffect(() => {
     if (messages.length > 1) {
@@ -583,8 +640,20 @@ export default function ChatScreen() {
           data={messages}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.chatList}
-          renderItem={({ item }) =>
-            item.role === 'guardian' ? (
+          renderItem={({ item }) => {
+            // 주간 리포트 특수 메시지
+            if (item.weeklyReport) {
+              return (
+                <WeeklyReportBubble
+                  report={item.weeklyReport}
+                  guardianEmoji={guardianEmoji}
+                  theme={theme}
+                  isPremium={isPremium}
+                  onUpgrade={() => router.push('/(tabs)/store')}
+                />
+              );
+            }
+            return item.role === 'guardian' ? (
               <GuardianBubble
                 message={item}
                 guardianEmoji={guardianEmoji}
@@ -593,8 +662,8 @@ export default function ChatScreen() {
               />
             ) : (
               <UserBubble message={item} />
-            )
-          }
+            );
+          }}
         />
 
         {/* 타이핑 인디케이터 */}

@@ -2,7 +2,7 @@
  * Gemini AI 사주 풀이 클라이언트 서비스
  * Firebase Cloud Function을 호출하여 AI 기반 사주 해석을 받아옵니다.
  */
-import type { SajuReading } from '../types';
+import type { SajuReading, WeeklyReport } from '../types';
 
 // Firebase Cloud Function URL
 // TODO: Firebase 프로젝트 생성 후 실제 프로젝트 ID로 교체
@@ -55,6 +55,57 @@ export async function fetchSajuReading(
   } catch (error: any) {
     if (error.name === 'AbortError') {
       throw new Error('사주 풀이 요청 시간이 초과되었습니다.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+// ── 주간 운세 리포트 ─────────────────────────────────
+
+export interface FetchWeeklyReportParams {
+  name: string;
+  gender: '남' | '여';
+  ohang: { 목: number; 화: number; 토: number; 금: number; 수: number };
+  strongest: string;
+  weakest: string;
+  guardianId: string;
+  guardianName: string;
+  guardianElement: string;
+  dayIndex: number;
+  fortuneGauge: number;
+  weekKey: string;
+}
+
+/**
+ * Cloud Function을 호출하여 주간 AI 운세 리포트를 생성합니다.
+ */
+export async function fetchWeeklyReport(
+  params: FetchWeeklyReportParams
+): Promise<WeeklyReport> {
+  const url = `${FUNCTION_BASE_URL}/getWeeklyReport`;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => '');
+      throw new Error(`Weekly report failed (${response.status}): ${errorBody}`);
+    }
+
+    return response.json();
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw new Error('주간 리포트 요청 시간이 초과되었습니다.');
     }
     throw error;
   } finally {

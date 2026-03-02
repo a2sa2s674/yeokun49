@@ -43,7 +43,7 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="helpers"
+        name="chat"
         options={{
           title: '조력자',
           tabBarIcon: ({ color, size }) => (
@@ -71,7 +71,7 @@ export default function TabsLayout() {
       />
       {/* 기존 탭 숨김 */}
       <Tabs.Screen name="saju" options={{ href: null }} />
-      <Tabs.Screen name="chat" options={{ href: null }} />
+      <Tabs.Screen name="helpers" options={{ href: null }} />
     </Tabs>
   );
 }

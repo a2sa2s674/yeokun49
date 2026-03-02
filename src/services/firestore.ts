@@ -4,6 +4,7 @@
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { useAppStore } from '../store';
+import type { WeeklyReport } from '../types';
 
 // ── 유저 프로필 저장 ──
 export async function saveUserProfile(uid: string): Promise<void> {
@@ -77,6 +78,22 @@ export async function loadUserProfile(uid: string): Promise<boolean> {
   }
 
   return true; // 데이터 복원 성공
+}
+
+// ── 주간 운세 리포트 저장 ──
+export async function saveWeeklyReport(uid: string, report: WeeklyReport): Promise<void> {
+  const reportRef = doc(db, 'users', uid, 'weeklyReports', report.weekKey);
+  await setDoc(reportRef, {
+    ...report,
+    savedAt: new Date().toISOString(),
+  });
+}
+
+// ── 주간 운세 리포트 조회 ──
+export async function loadWeeklyReport(uid: string, weekKey: string): Promise<WeeklyReport | null> {
+  const reportRef = doc(db, 'users', uid, 'weeklyReports', weekKey);
+  const snapshot = await getDoc(reportRef);
+  return snapshot.exists() ? (snapshot.data() as WeeklyReport) : null;
 }
 
 // ── AI 사주 풀이 저장 ──

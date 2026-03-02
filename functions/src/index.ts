@@ -217,6 +217,153 @@ export const generateSajuReading = functions
   });
 
 // ═══════════════════════════════════════════════════════════
+// 주간 AI 운세 리포트 생성
+// ═══════════════════════════════════════════════════════════
+
+interface WeeklyReportRequest {
+  name: string;
+  gender: '남' | '여';
+  ohang: { 목: number; 화: number; 토: number; 금: number; 수: number };
+  strongest: string;
+  weakest: string;
+  guardianId: string;
+  guardianName: string;
+  guardianElement: string;
+  dayIndex: number;
+  fortuneGauge: number;
+  weekKey: string;
+}
+
+function buildWeeklyReportPrompt(data: WeeklyReportRequest): string {
+  return `당신은 한국 전통 사주팔자 기반 개인 운세 상담가이며,
+사용자의 수호신 "${data.guardianName}" (${data.guardianElement}의 기운)의 말투로 이야기합니다.
+따뜻하고 신비로우며, 수호신 특유의 개성이 드러나는 톤으로 이번 주 운세를 알려주세요.
+
+[사주 정보]
+- 이름: ${data.name}
+- 성별: ${data.gender}
+- 오행 비율: 목(木) ${data.ohang.목}%, 화(火) ${data.ohang.화}%, 토(土) ${data.ohang.토}%, 금(金) ${data.ohang.금}%, 수(水) ${data.ohang.수}%
+- 가장 강한 오행: ${data.strongest}
+- 가장 약한 오행: ${data.weakest}
+
+[49일 여정 현황]
+- 현재 ${data.dayIndex + 1}일차 / 49일
+- 길/흉 게이지: ${data.fortuneGauge}/100
+
+[주간 정보]
+- 주차: ${data.weekKey}
+
+다음 JSON 형식으로만 응답하세요:
+
+{
+  "greeting": "수호신이 전하는 따뜻한 인사말 (1~2문장, 수호신 말투)",
+  "overview": "이번 주 전체 운세 요약 (3~4문장)",
+  "sections": [
+    { "title": "이번 주 행운의 오행", "icon": "🍀", "content": "행운의 오행 흐름과 활용법 (2~3문장)" },
+    { "title": "주의할 점", "icon": "⚠️", "content": "이번 주 조심할 부분 (2~3문장)" },
+    { "title": "연애/인간관계", "icon": "💕", "content": "대인관계 운세 (2~3문장)" },
+    { "title": "재물/커리어", "icon": "💰", "content": "재물과 업무 운세 (2~3문장)" },
+    { "title": "이번 주 특별 조언", "icon": "✨", "content": "수호신의 특별 조언 (2~3문장)" }
+  ],
+  "luckyDay": "행운의 요일 (예: 화요일)",
+  "luckyElement": "행운의 오행 (목/화/토/금/수 중 하나)",
+  "weeklyAffirmation": "이번 주 긍정 확언 한 줄"
+}
+
+JSON만 출력하세요. 다른 텍스트, 마크다운, 코드블록 기호는 포함하지 마세요.`;
+}
+
+export const getWeeklyReport = functions
+  .region('asia-northeast3')
+  .runWith({ timeoutSeconds: 120, memory: '256MB' })
+  .https.onRequest((req, res) => {
+    corsHandler(req, res, async () => {
+      if (req.method !== 'POST') {
+        res.status(405).json({ error: 'Method not allowed' });
+        return;
+      }
+
+      try {
+        const data = req.body as WeeklyReportRequest;
+
+        if (!data.ohang || !data.guardianName || !data.weekKey) {
+          res.status(400).json({ error: 'Missing required fields: ohang, guardianName, weekKey' });
+          return;
+        }
+
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
+          console.error('GEMINI_API_KEY not set.');
+          res.status(500).json({ error: 'AI service not configured' });
+          return;
+        }
+
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const models = ['gemini-2.5-pro', 'gemini-2.5-flash'];
+        const prompt = buildWeeklyReportPrompt(data);
+        let text = '';
+
+        for (const modelName of models) {
+          try {
+            console.log(`[WeeklyReport] Calling ${modelName}...`);
+            const model = genAI.getGenerativeModel({
+              model: modelName,
+              generationConfig: {
+                temperature: 0.8,
+                topP: 0.9,
+                maxOutputTokens: 4096,
+              },
+            });
+
+            const result = await model.generateContent(prompt);
+            text = result.response.text();
+            console.log(`[WeeklyReport] ${modelName} response received, length:`, text.length);
+            break;
+          } catch (modelError: any) {
+            console.warn(`[WeeklyReport] ${modelName} failed:`, modelError?.message);
+            if (modelName === models[models.length - 1]) {
+              throw modelError;
+            }
+            console.log('[WeeklyReport] Trying fallback model...');
+          }
+        }
+
+        // 응답 파싱 (기존 extractJsonFromText 재활용)
+        const jsonStr = extractJsonFromText(text);
+        const parsed = JSON.parse(jsonStr);
+
+        if (!parsed.greeting || !parsed.overview || !Array.isArray(parsed.sections) || parsed.sections.length === 0) {
+          throw new Error('Invalid weekly report structure from Gemini');
+        }
+
+        const response = {
+          weekKey: data.weekKey,
+          greeting: parsed.greeting,
+          overview: parsed.overview,
+          sections: parsed.sections.map((s: any) => ({
+            title: s.title || '',
+            icon: s.icon || '🔮',
+            content: s.content || '',
+          })),
+          luckyDay: parsed.luckyDay || '월요일',
+          luckyElement: parsed.luckyElement || '수',
+          weeklyAffirmation: parsed.weeklyAffirmation || '',
+          generatedAt: new Date().toISOString(),
+          guardianId: data.guardianId || '',
+        };
+
+        res.status(200).json(response);
+      } catch (error: any) {
+        console.error('getWeeklyReport error:', error?.message || error);
+        res.status(500).json({
+          error: 'Failed to generate weekly report',
+          message: error?.message || 'Unknown error',
+        });
+      }
+    });
+  });
+
+// ═══════════════════════════════════════════════════════════
 // 카카오 로그인 → Firebase Custom Token 발급
 // ═══════════════════════════════════════════════════════════
 

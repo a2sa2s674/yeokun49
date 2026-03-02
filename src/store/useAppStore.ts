@@ -4,7 +4,7 @@
  */
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { OhangStats, OhangKey, Quest, SajuReading } from '../types';
+import type { OhangStats, OhangKey, Quest, SajuReading, WeeklyReport } from '../types';
 
 // ── 타입 정의 ────────────────────────────────────
 
@@ -79,6 +79,11 @@ interface AppState {
   // ── 친밀도 ──
   guardianIntimacy: Record<string, number>;  // 수호신별 친밀도 포인트
 
+  // ── 주간 운세 리포트 ──
+  weeklyReport: WeeklyReport | null;
+  lastWeeklyReportSeen: string | null;  // 마지막으로 본 weekKey
+  weeklyReportLoading: boolean;
+
   // ── 액션 ──
   setAuthUser: (userId: string, email: string, provider: 'google' | 'kakao') => void;
   clearAuth: () => void;
@@ -109,6 +114,9 @@ interface AppState {
   incrementChatUsed: () => void;
   incrementSajuReadingCount: () => void;
   incrementIntimacy: (guardianId: string, amount?: number) => void;
+  setWeeklyReport: (report: WeeklyReport) => void;
+  setLastWeeklyReportSeen: (weekKey: string) => void;
+  setWeeklyReportLoading: (loading: boolean) => void;
   resetStore: () => void;
 }
 
@@ -148,6 +156,9 @@ export const useAppStore = create<AppState>()(
       chatUsedCount: 0,
       sajuReadingCount: 0,
       guardianIntimacy: {},
+      weeklyReport: null,
+      lastWeeklyReportSeen: null,
+      weeklyReportLoading: false,
 
       // 액션
       setAuthUser: (userId, email, provider) =>
@@ -257,6 +268,15 @@ export const useAppStore = create<AppState>()(
           },
         })),
 
+      setWeeklyReport: (report) =>
+        set({ weeklyReport: report, weeklyReportLoading: false }),
+
+      setLastWeeklyReportSeen: (weekKey) =>
+        set({ lastWeeklyReportSeen: weekKey }),
+
+      setWeeklyReportLoading: (loading) =>
+        set({ weeklyReportLoading: loading }),
+
       resetStore: () =>
         set({
           userId: null,
@@ -285,6 +305,9 @@ export const useAppStore = create<AppState>()(
           chatUsedCount: 0,
           sajuReadingCount: 0,
           guardianIntimacy: {},
+          weeklyReport: null,
+          lastWeeklyReportSeen: null,
+          weeklyReportLoading: false,
         }),
     }),
     {

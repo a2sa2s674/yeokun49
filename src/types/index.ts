@@ -56,6 +56,8 @@ export interface ChatMessage {
     questId: string;
     accepted: boolean;
   };
+  /** 주간 운세 리포트 (특수 메시지) */
+  weeklyReport?: WeeklyReport;
 }
 
 export interface QuickAction {
@@ -65,6 +67,26 @@ export interface QuickAction {
   action: 'ask_omen' | 'change_quest' | 'get_comfort';
   /** 친밀도 보너스 포인트 (기본 0) */
   intimacyBonus?: number;
+}
+
+// ── 주간 AI 운세 리포트 ────────────────────────────
+
+export interface WeeklyReportSection {
+  title: string;
+  icon: string;
+  content: string;
+}
+
+export interface WeeklyReport {
+  weekKey: string;           // "2026-W10"
+  greeting: string;          // 수호신 인사말
+  overview: string;          // 전체 운세 요약
+  sections: WeeklyReportSection[];  // 5개 섹션
+  luckyDay: string;          // 행운의 요일
+  luckyElement: OhangKey;    // 행운의 오행
+  weeklyAffirmation: string; // 긍정 확언
+  generatedAt: string;       // ISO timestamp
+  guardianId: string;
 }
 
 // ── AI 사주 풀이 ──────────────────────────────────
