@@ -114,6 +114,22 @@ function formatTimestamp(ts: number): string {
   return `${period} ${displayHour}:${minutes}`;
 }
 
+// ── 임시 심층 해설 (AI 연동 전) ──
+function getPlaceholderDeepFortune(name: string): string {
+  return `### 🌌 오늘의 기운 분석
+
+오늘은 토(土)의 기운이 대지를 감싸며 안정적인 흐름을 만들어내고 있습니다. 평소보다 차분하고 안정적인 에너지가 세상을 지배하는 날로, 급격한 변화보다는 꾸준한 전진이 유리한 기운입니다.
+
+### ⚔️ 명식과의 상호작용
+
+당신의 사주에서 부족했던 기운을 오늘의 토(土) 에너지가 보충해주고 있습니다. 특히 오후 시간대에 금(金)의 기운이 합류하면서, 결단력과 판단력이 평소보다 높아질 것입니다. 다만 화(火)의 기운과 약간의 충돌이 예상되므로 감정적인 대응은 자제하는 것이 좋겠습니다.
+
+### 🛡️ 운명 개척 전술
+
+1. **오전 중으로 중요한 결정을 내리세요.** 오늘의 기운 흐름상 오전에 판단력이 가장 선명합니다. ${name}이(가) 보호막을 강하게 펼쳐드리겠습니다.
+2. **흙과 관련된 활동으로 기운을 보충하세요.** 맨발로 잔디를 밟거나, 화분 식물을 돌보는 것만으로도 부족한 토(土)의 기운이 채워집니다.`;
+}
+
 // ── 임시 응답 (AI 연동 전) ──
 function getPlaceholderResponse(name: string, action?: string): string {
   if (action === 'today_fortune') {
@@ -466,9 +482,7 @@ export default function ChatScreen() {
           const content = fortune?.shortFortune
             ?? getPlaceholderResponse(guardianName, actionType);
           // 심층 해설 텍스트 저장
-          if (fortune?.deepFortune) {
-            setDeepFortuneText(fortune.deepFortune);
-          }
+          setDeepFortuneText(fortune?.deepFortune ?? getPlaceholderDeepFortune(guardianName));
           const guardianMsg: ChatMessage = {
             id: `fortune-${Date.now()}`,
             role: 'guardian',
@@ -481,6 +495,7 @@ export default function ChatScreen() {
         })
         .catch(() => {
           // 실패 시 플레이스홀더 사용
+          setDeepFortuneText(getPlaceholderDeepFortune(guardianName));
           const guardianMsg: ChatMessage = {
             id: `fortune-${Date.now()}`,
             role: 'guardian',
