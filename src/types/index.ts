@@ -64,7 +64,7 @@ export interface QuickAction {
   id: string;
   emoji: string;
   label: string;
-  action: 'ask_omen' | 'change_quest' | 'get_comfort';
+  action: 'ask_omen' | 'change_quest' | 'get_comfort' | 'today_fortune';
   /** 친밀도 보너스 포인트 (기본 0) */
   intimacyBonus?: number;
 }

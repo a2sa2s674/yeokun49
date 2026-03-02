@@ -75,12 +75,14 @@ const GUARDIAN_SUBTITLE: Record<string, string> = {
 
 // ── 빠른 액션 칩 ──
 const QUICK_ACTIONS: QuickAction[] = [
+  { id: 'fortune', emoji: '\u2728', label: '오늘의 운세', action: 'today_fortune' },
   { id: 'omen', emoji: '\uD83D\uDD2E', label: '징조 묻기', action: 'ask_omen' },
   { id: 'quest', emoji: '\uD83D\uDD04', label: '퀘스트 변경', action: 'change_quest' },
   { id: 'comfort', emoji: '\u2615', label: '위로받기', action: 'get_comfort', intimacyBonus: 2 },
 ];
 
 const QUICK_ACTION_MESSAGES: Record<string, string> = {
+  today_fortune: '오늘의 운세를 알려주세요',
   ask_omen: '오늘의 징조를 알려주세요',
   change_quest: '다른 퀘스트를 추천해주세요',
   get_comfort: '오늘 힘든 일이 있었어요, 위로해주세요',
@@ -112,6 +114,16 @@ function formatTimestamp(ts: number): string {
 
 // ── 임시 응답 (AI 연동 전) ──
 function getPlaceholderResponse(name: string, action?: string): string {
+  if (action === 'today_fortune') {
+    const fortunes = [
+      `오늘은 화(火)의 기운이 강하게 작용하는 날입니다. 적극적으로 행동하면 뜻밖의 좋은 결과가 있을 거예요. 다만 오후에는 감정 조절에 신경 쓰세요.`,
+      `금(金)의 기운이 당신을 감싸고 있습니다. 오늘은 결단이 필요한 일에 좋은 날이에요. 망설이지 말고 마음이 이끄는 대로 해보세요.`,
+      `오늘은 수(水)의 기운이 고요하게 흐르는 날입니다. 급하게 움직이기보다 차분하게 생각을 정리하는 시간을 가져보세요. 저녁에 좋은 소식이 올 수 있어요.`,
+      `목(木)의 기운이 활발한 하루입니다! 새로운 도전이나 배움에 행운이 따릅니다. ${name}이(가) 응원하고 있어요.`,
+      `토(土)의 기운이 안정감을 주는 날이에요. 주변 사람들과의 관계에서 따뜻한 일이 생길 수 있습니다. 감사의 마음을 전해보세요.`,
+    ];
+    return fortunes[Math.floor(Math.random() * fortunes.length)];
+  }
   if (action === 'ask_omen') {
     const omens = [
       `오늘 오후 3시경, 북서쪽에서 예기치 못한 금(金)의 흉살이 다가오는 것이 느껴집니다. 각별히 몸을 사리셔야 합니다.`,
