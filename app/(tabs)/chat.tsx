@@ -43,7 +43,7 @@ import { AppColors } from '../../src/styles/tokens';
 import type { ChatMessage, QuickAction } from '../../src/types';
 
 const { width: SCREEN_W } = Dimensions.get('window');
-const FREE_CHAT_LIMIT = 3;
+const FREE_CHAT_LIMIT = 1000; // 테스트용 (원래 3)
 
 // ── 수호신 이모지 매핑 ──
 const GUARDIAN_EMOJI: Record<string, string> = {
