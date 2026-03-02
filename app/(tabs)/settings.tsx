@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import Animated, { FadeIn, SlideInUp } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useAppStore } from '../../src/store';
 import { getGuardianById } from '../../src/data/guardians';
 import { signOut } from '../../src/services/auth';
@@ -89,7 +89,7 @@ function SajuProfileCard({
   };
 
   return (
-    <Animated.View entering={SlideInUp.delay(200).duration(500)} style={styles.card}>
+    <Animated.View entering={FadeIn.delay(200).duration(500)} style={styles.card}>
       <Text style={styles.cardTitle}>📋 나의 사주 프로필</Text>
       <View style={styles.divider} />
 
@@ -147,7 +147,7 @@ function ProgressCard({
   const progressWidth = `${Math.max(progressPercent, 2)}%`;
 
   return (
-    <Animated.View entering={SlideInUp.delay(300).duration(500)} style={styles.card}>
+    <Animated.View entering={FadeIn.delay(300).duration(500)} style={styles.card}>
       <Text style={styles.cardTitle}>⏳ 49일 여정</Text>
       <View style={styles.divider} />
 
@@ -183,7 +183,7 @@ function GuardianInfoCard({
   const emoji = guardianId ? (GUARDIAN_EMOJI[guardianId] || '🔮') : '🔮';
 
   return (
-    <Animated.View entering={SlideInUp.delay(400).duration(500)} style={styles.card}>
+    <Animated.View entering={FadeIn.delay(400).duration(500)} style={styles.card}>
       <Text style={styles.cardTitle}>🛡️ 나의 조력자</Text>
       <View style={styles.divider} />
 
@@ -236,7 +236,7 @@ function AiInterpretationCard({
   const hasUsedFreeReading = sajuReadingCount >= 1;
 
   return (
-    <Animated.View entering={SlideInUp.delay(250).duration(500)} style={styles.card}>
+    <Animated.View entering={FadeIn.delay(250).duration(500)} style={styles.card}>
       <Pressable
         onPress={() => setExpanded(!expanded)}
         style={styles.aiCardHeader}
@@ -313,7 +313,7 @@ function SettingsMenu({
   const [notificationEnabled, setNotificationEnabled] = useState(true);
 
   return (
-    <Animated.View entering={SlideInUp.delay(500).duration(500)} style={styles.card}>
+    <Animated.View entering={FadeIn.delay(500).duration(500)} style={styles.card}>
       <Pressable style={styles.menuItem}>
         <View style={styles.menuLeft}>
           <Text style={styles.menuIcon}>🔔</Text>

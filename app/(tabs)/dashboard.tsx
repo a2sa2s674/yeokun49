@@ -22,7 +22,6 @@ import Animated, {
   withSequence,
   withTiming,
   FadeIn,
-  SlideInUp,
 } from 'react-native-reanimated';
 import { useAppStore } from '../../src/store';
 import { getGuardianById } from '../../src/data/guardians';
@@ -419,7 +418,7 @@ function WarningCard() {
   const dailyWarning = useAppStore((s) => s.dailyWarning);
 
   return (
-    <Animated.View entering={SlideInUp.delay(600).duration(600)}>
+    <Animated.View entering={FadeIn.delay(600).duration(500)}>
       <Pressable style={warnStyles.card}>
         <LinearGradient
           colors={[AppColors.purpleMain, AppColors.purpleDark]}
@@ -481,7 +480,7 @@ function QuestPreviewCard() {
   const firstQuest = todayQuests[0];
 
   return (
-    <Animated.View entering={SlideInUp.delay(800).duration(600)}>
+    <Animated.View entering={FadeIn.delay(800).duration(500)}>
       <Pressable style={questStyles.card}>
         <Text style={questStyles.checkIcon}>
           {firstQuest?.completed ? '☑' : '☐'}

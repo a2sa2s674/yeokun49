@@ -15,7 +15,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
   FadeIn,
-  SlideInUp,
   useSharedValue,
   useAnimatedStyle,
   withSpring,
@@ -611,7 +610,7 @@ export default function QuestScreen() {
           <FortuneGauge value={fortuneGauge} />
 
           {/* 기본 미션 섹션 */}
-          <Animated.View entering={SlideInUp.delay(300).duration(500)} style={styles.section}>
+          <Animated.View entering={FadeIn.delay(300).duration(400)} style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionLine} />
               <Text style={styles.sectionTitle}>기본 미션</Text>
@@ -633,7 +632,7 @@ export default function QuestScreen() {
 
           {/* 특별 미션 섹션 */}
           {specialQuests.length > 0 && (
-            <Animated.View entering={SlideInUp.delay(450).duration(500)} style={styles.section}>
+            <Animated.View entering={FadeIn.delay(450).duration(400)} style={styles.section}>
               {specialQuests.map((quest) => (
                 <SpecialMissionCard
                   key={quest.id}

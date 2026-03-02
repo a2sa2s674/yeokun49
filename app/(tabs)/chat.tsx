@@ -24,7 +24,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import Animated, {
   FadeIn,
-  SlideInUp,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
@@ -239,7 +238,7 @@ function GuardianBubble({
   onQuestAccept?: (questId: string) => void;
 }) {
   return (
-    <Animated.View entering={SlideInUp.duration(300)} style={styles.guardianRow}>
+    <Animated.View entering={FadeIn.duration(400)} style={styles.guardianRow}>
       {/* 아바타 */}
       <View style={[styles.avatar, { backgroundColor: theme.bgGradientStart }]}>
         <Text style={styles.avatarEmoji}>{guardianEmoji}</Text>
@@ -286,7 +285,7 @@ function GuardianBubble({
 // ── 사용자 말풍선 ──
 function UserBubble({ message }: { message: ChatMessage }) {
   return (
-    <Animated.View entering={SlideInUp.duration(300)} style={styles.userRow}>
+    <Animated.View entering={FadeIn.duration(200)} style={styles.userRow}>
       <View style={styles.userBubbleCol}>
         <View style={styles.userBubble}>
           <Text style={styles.userText}>{message.content}</Text>
